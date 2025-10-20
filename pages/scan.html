@@ -1268,32 +1268,6 @@ function setRunning(s){
     }catch(e){ showToast('Server error'); }
   })();
 }
-  if(s===RUNNING) return;
-  RUNNING=s; 
-  Core.running=s;
-
-  btnStart.classList.toggle('opacity-50',s); 
-  btnStart.classList.toggle('pointer-events-none',s); 
-  btnStart.setAttribute('aria-pressed', String(s));
-
-  btnStop.classList.toggle('opacity-50',!s); 
-  btnStop.classList.toggle('pointer-events-none',!s); 
-  btnStop.setAttribute('aria-pressed', String(!s));
-
-  const appMain=document.getElementById('appMain');
-
-  if(s){
-    appMain.classList.remove('idle'); // show live
-    showToast('Scan started');
-    if(targets.length===0) seedTargets(8);
-    if(workerOk){ worker && worker.postMessage({t:'START'}); } 
-    else { Fallback.start(); }
-  } else {
-    showToast('Scan stopped — view frozen'); // freeze
-    if(workerOk){ worker && worker.postMessage({t:'STOP'}); } 
-    else { Fallback.stop(); }
-    Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal});
-  }
 }
 
 
