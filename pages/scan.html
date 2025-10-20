@@ -1416,23 +1416,25 @@ function init(){
 
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
   addEventListener('beforeunload',()=>{ Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal}); });
-   // Initial server sync
-  try{
-    const { scan } = await apiGET('/scan/status');
-    Core.elapsedMs = scan?.elapsed_ms || 0;
-    Core.walletsTotal = scan?.total_scanned || 0;
-    walletsEl.textContent = formatCount(Core.walletsTotal);
-    scanTimerEl.textContent = formatHMS(Core.elapsedMs);
-    if (scan?.status === 'running'){
-      RUNNING = true; Core.running = true;
-      document.getElementById('appMain').classList.remove('idle');
-      btnStart.classList.add('opacity-50','pointer-events-none');
-      btnStop.classList.remove('opacity-50','pointer-events-none');
-    } else {
-      RUNNING = false; Core.running = false;
-    }
-    startStatusPolling();
-  }catch(e){}
+  // Initial server sync
+  (async () => {
+    try{
+      const { scan } = await apiGET('/scan/status');
+      Core.elapsedMs = scan?.elapsed_ms || 0;
+      Core.walletsTotal = scan?.total_scanned || 0;
+      walletsEl.textContent = formatCount(Core.walletsTotal);
+      scanTimerEl.textContent = formatHMS(Core.elapsedMs);
+      if (scan?.status === 'running'){
+        RUNNING = true; Core.running = true;
+        document.getElementById('appMain').classList.remove('idle');
+        btnStart.classList.add('opacity-50','pointer-events-none');
+        btnStop.classList.remove('opacity-50','pointer-events-none');
+      } else {
+        RUNNING = false; Core.running = false;
+      }
+      startStatusPolling();
+    }catch(e){}
+  })();
   startConnectivityWatchdog();
 }
 init();
