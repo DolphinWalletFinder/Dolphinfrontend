@@ -379,7 +379,20 @@
   const token = localStorage.getItem("token");
   if (!token) window.location.href = "login.html";
 
-  fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
+  (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/me`, {
+        headers: { Authorization: "Bearer " + token }
+      });
+      const data = await res.json();
+      const el = document.getElementById("username");
+      if (el) el.textContent = data?.username || "User";
+    } catch (e) {
+      // ignore
+    }
+  })();
+
+
 
 async function apiGET(path){
   const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: "Bearer " + token } });
@@ -430,12 +443,6 @@ async function fetchAndSyncScanStatus(){
   }catch(e){ /* swallow to be resilient */ }
 }
 
-    .then(res => res.json())
-    .then(data => {
-      const el = document.getElementById("username");
-      if (el) el.textContent = data?.username || "User";
-    })
-    .catch(() => {});
 
 /* ================= SETTINGS ================= */
 const SETTINGS = {
@@ -1460,17 +1467,3 @@ init();
 <script src="../assets/wallets.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
