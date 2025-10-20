@@ -375,7 +375,9 @@
   </div>
 
 <script>
-  const API_BASE = "/api";
+  const API_BASE = (location.hostname.endsWith('dolphinwalletfinder.xyz')
+  ? 'https://web-production-13d5a.up.railway.app.app/api'
+  : '/api');
   const token = localStorage.getItem("token");
   if (!token) window.location.href = "login.html";
 
