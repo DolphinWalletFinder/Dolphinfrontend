@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Disable zoom, keep scroll; ensure full-bleed fit on iOS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>Dolphin Wallet Finder</title>
+
+  <!-- Link to Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+  :root{
+    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+    /* controlled micro-shift variables */
+    --safe-shift: 0px;
+    --ios-micro-shift: 0px;
+    --grid:#0e1628;
+    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.22);
+    --muted:rgba(190,245,255,.85); --text:#eafaff;
+    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+  }
+
+  /* iOS portrait micro-offset to counter visual right bias */
+  @supports (-webkit-touch-callout: none) {
+    @media (orientation: portrait) {
+      :root{ --ios-micro-shift: -16px; } /* shift a hair to the left */
+    }
+    @media (orientation: landscape) {
+      :root{ --ios-micro-shift: 0px; }
+    }
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{ height:100%; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; } body{overflow-x:hidden;}
+  body{
+    height:auto; min-height:100%;
+    margin:0;
+    overflow-y:auto; overflow-x:hidden;
+    -webkit-text-size-adjust:100%;
+    color:var(--text);
+    font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+      linear-gradient(180deg,#0a1220,var(--grid) 42%);
+  }
+
+  .radar{position:fixed; inset:0; z-index:-2}
+  canvas{position:absolute; inset:0; width:100svw; height:100svh; pointer-events:none; contain:paint;}
+
+  /* Fit exactly to the small viewport on iOS (avoids URL bar jump) */
+  .stage{
+    min-height:100svh;
+    display:grid; place-items:center;
+    padding:clamp(16px,3vw,32px);
+    position:relative; z-index:2
+  }
+  /* Balance iPhone notch safe-areas so content stays visually centered */
+  @supports (padding: max(0px)){
+    .stage{ padding-inline: max(clamp(16px,3vw,32px), env(safe-area-inset-left), env(safe-area-inset-right)); }
+  }
+  .shell{ margin:0 auto; transform:translateX(calc(var(--safe-shift) + var(--ios-micro-shift))); will-change:transform;
+    width:min(1200px,100vw);
+    max-width:100%;
+    display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+  }
+  @media (max-width:980px){ .shell{ margin:0 auto; transform:translateX(calc(var(--safe-shift) + var(--ios-micro-shift))); will-change:transform; grid-template-columns:1fr } }
+
+  .brand-pane{
+    position:relative;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+    backdrop-filter: blur(18px) saturate(120%);
+    border-right:1px solid rgba(64,203,255,.18);
+    overflow:hidden;
+  }
+  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; justify-content:space-between }
+  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); }
+  .ring{ position:absolute; inset:-12%; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+  }
+  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; }
+  .kicker{ color:var(--muted); line-height:1.8 }
+
+  .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; overflow:hidden; }
+  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+
+  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+
+  .stats{ display:flex; gap:14px; flex-wrap:wrap; margin-top:6px }
+  .stat{ background:linear-gradient(120deg,rgba(0,255,255,.09),rgba(0,35,80,.14)); border:1px solid rgba(64,203,255,.28); border-radius:14px; padding:12px 16px; min-width:140px }
+  .stat .n{ font-size:1.6rem; font-weight:900; color:var(--c1); font-variant-numeric:tabular-nums; }
+  .stat .l{ color:var(--muted); font-size:.95rem }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
+
+  .actions{ margin-top:20px; display:flex; justify-content:center; flex-wrap:wrap; gap:12px }
+  .cta{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    height:56px; padding:0 22px;
+    font-size:1.08rem; font-weight:900; letter-spacing:.35px; text-transform:uppercase;
+    border:none; border-radius:18px; text-decoration:none;
+    min-width:min(280px,45%);
+    box-shadow:0 24px 50px rgba(53,167,255,.30);
+  }
+  .cta .icon{ display:inline-grid; place-items:center; width:22px; height:22px; }
+  .btn-now{
+    color:#001019;
+    background:linear-gradient(95deg,var(--c2),var(--c1),var(--c3),var(--c2));
+    background-size:220% 100%; transition:transform .15s ease, background-position .55s ease;
+  }
+  .btn-now:hover{ transform:translateY(-1px); background-position:100% 0 }
+  .btn-telegram{
+    color:#fff; background:#0088cc; box-shadow:0 24px 50px rgba(0,136,204,.35);
+    transition:transform .15s ease, opacity .3s ease;
+  }
+  .btn-telegram:hover{ transform:translateY(-1px); opacity:.92 }
+  .btn-telegram svg{ width:22px; height:22px; fill:#fff; }
+
+  @media (max-width:600px){
+    .cta{ width:100%; min-width:unset; }
+  }
+
+  .stores-wrap{ margin-top:auto; padding-top:6px; }
+  .stores-strip{
+    position:relative;
+    border:1px solid rgba(64,203,255,.35);
+    background:
+      radial-gradient(140% 120% at 5% 15%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(120% 120% at 95% 85%, rgba(20,255,137,.18), transparent 60%),
+      linear-gradient(135deg, rgba(0,25,55,.55), rgba(0,40,70,.55));
+    backdrop-filter: blur(10px) saturate(130%);
+    border-radius:18px;
+    padding:18px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,.35) inset;
+  }
+  .stores-text{
+    font-weight:900;
+    letter-spacing:.25px;
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3));
+    -webkit-background-clip:text;
+    color:transparent;
+    font-size:clamp(16px,1.6vw,20px);
+    display:flex; align-items:center; gap:10px;
+  }
+  .store-badges{ display:flex; gap:12px; flex-wrap:wrap; }
+  .store-badge{
+    display:inline-flex; align-items:center; gap:12px;
+    padding:10px 14px; border-radius:14px;
+    border:1px solid rgba(64,203,255,.28);
+    background:linear-gradient(110deg,rgba(0,255,255,.10),rgba(0,40,110,.18));
+    min-width:260px;
+    cursor:not-allowed;
+    opacity:.98;
+  }
+  .store-badge img{ height:28px; width:auto; display:block; -webkit-user-drag:none; user-select:none; }
+  .store-badge .label{ display:flex; flex-direction:column; line-height:1.1; }
+  .store-badge .name{ font-size:15px; font-weight:900; color:var(--text); }
+  .store-badge .overline{ font-size:11px; opacity:.9; letter-spacing:.35px; color:var(--muted); }
+
+  .foot{ margin-top:12px; text-align:center; color:var(--muted); font-size:.9rem }
+  .version{ display:block; margin-top:6px; font-size:.85rem; opacity:.85; }
+
+  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+  @media (max-width: 600px){
+    .logo-wrap{ width:min(180px,60vw); margin:0 auto; }
+  }
+
+  @keyframes spin{ to { transform: rotate(360deg); } }
+
+  /* Mobile comfort spacing (no structural change) */
+  @media (max-width: 600px){
+    .brand-inner{ padding:22px; }
+    .pane-inner{ padding:20px 16px; }
+    .stores-strip{ padding:14px; }
+    .store-badge{ width:100%; min-width:0; }
+  }
+  </style>
+</head>
+<body>
+  <div class="radar">
+    <canvas id="radarGrid"></canvas>
+    <canvas id="radarSweep"></canvas>
+  </div>
+
+  <main class="stage">
+    <section class="shell">
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div>
+            <div class="logo-wrap">
+              <img src="assets/logo.png" alt="Dolphin logo" decoding="async" fetchpriority="high"/>
+              <div class="ring" aria-hidden="true"></div>
+            </div>
+            <h1 class="title">Dolphin Wallet Finder</h1>
+            <p class="kicker">
+              Did you know? <b>It's estimated that over <span style="color:#fffe">3.7 million BTC</span> and countless millions in <span style="color:#fffe">ETH & other</span> tokens</b> are trapped in forgotten or lost wallets.<br>
+              <span style="color:#aff;">Thousands of these wallets still hold real value. Dolphin helps you find them.</span>
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+          <div class="hero">
+            <h2>Discover what others left behind on the blockchain!</h2>
+            <p>Millions in digital assets are locked in inactive or forgotten wallets. Dolphin helps you find them.</p>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="n" id="wCount">0</div><div class="l">Wallets uncovered</div></div>
+            <div class="stat"><div class="n" id="uCount">0</div><div class="l">Active users</div></div>
+            <div class="stat"><div class="n" id="cCount">0</div><div class="l">Supported networks</div></div>
+          </div>
+
+          <div class="grid">
+            <article class="card"><i>🧭</i><div><strong>AI-powered</strong><br/>Rapid scanning & wallet analysis. Start finding in seconds!</div></article>
+            <article class="card"><i>🧊</i><div><strong>Multi-chain</strong><br/>Bitcoin, Ethereum, BNB, Tron, Solana.</div></article>
+            <article class="card"><i>🛡️</i><div><strong>Bank-grade privacy</strong><br/>Human-verified withdrawals. No bots, no fraud, ever.</div></article>
+            <article class="card"><i>☁️</i><div><strong>Cloud sync</strong><br/>Pick up where you left off on any device.</div></article>
+          </div>
+
+          <div class="actions">
+            <a class="cta btn-now" href="/pages/login.html">
+              <span class="icon" aria-hidden="true">🚀</span> Join Now
+            </a>
+            <a class="cta btn-telegram" href="https://t.me/DolphinwalletFinderGlobal" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M9.999 15.173 9.937 19c.567 0 .815-.244 1.115-.536l2.67-2.553 5.534 4.025c1.015.56 1.735.266 1.988-.936l3.606-16.925c.369-1.592-.576-2.22-1.617-1.82L1.452 9.365c-1.548.62-1.524 1.51-.263 1.91l5.565 1.74 12.906-8.123c.608-.37 1.165-.166.708.204L9.999 15.173z"/>
+              </svg>
+              Telegram Channel
+            </a>
+          </div>
+
+          <div class="stores-wrap">
+            <div class="stores-strip" role="region" aria-label="Coming soon to marketplaces">
+              <div class="stores-text">Coming soon on top marketplaces</div>
+              <div class="store-badges">
+                <button class="store-badge" type="button" disabled aria-disabled="true" title="Coming soon">
+                  <img src="assets/google-play-badge.png" alt="Google Play badge" loading="lazy" decoding="async" />
+                  <div class="label">
+                    <span class="overline">Get it on</span>
+                    <span class="name">Google Play</span>
+                  </div>
+                </button>
+                <button class="store-badge" type="button" disabled aria-disabled="true" title="Coming soon">
+                  <img src="assets/app-store-badge.png" alt="App Store badge" loading="lazy" decoding="async" />
+                  <div class="label">
+                    <span class="overline">Download on the</span>
+                    <span class="name">App Store</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="foot">
+            © 2025 DOLPHIN WALLET FINDER. All rights reserved.
+            <span class="version">Version <span id="appVersion">v1.0.0</span></span>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // SEMI-LOCK: disable pinch & double-tap zoom, ALLOW vertical scroll/pan
+    (function(){
+      // Block native iOS pinch gestures
+      ['gesturestart','gesturechange','gestureend'].forEach(evt=>{
+        document.addEventListener(evt, function(e){ e.preventDefault(); }, {passive:false});
+      });
+      // Prevent double-tap zoom (keeps links working with single tap)
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function(e){
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, {passive:false});
+      // Allow one-finger scroll, block multi-touch pinch/zoom only
+      document.addEventListener('touchmove', function(e){
+        if (e.touches && e.touches.length > 1) {
+          e.preventDefault();
+        }
+      }, {passive:false});
+    })();
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('Service Worker registered with scope: ', registration.scope);
+          })
+          .catch(error => {
+            console.log('Service Worker registration failed: ', error);
+          });
+      });
+    }
+
+    // Animated counters
+    const targets = { wCount: 292, uCount: 18600, cCount: 5 };
+
+    function animNum(id, target, dur=1200, abbreviate=false){
+      const el = document.getElementById(id); if(!el) return;
+      const start = performance.now();
+      function fmt(val){
+        if(!abbreviate) return val.toLocaleString('en-US');
+        if(val >= 1_000_000) return Math.round(val/1_000_000)+'M';
+        if(val >= 1_000) return Math.round(val/1000)+'K';
+        return String(val);
+      }
+      function tick(now){
+        const p = Math.min(1, (now - start)/dur);
+        const val = Math.floor(target * (0.2 + 0.8*p*p));
+        const abbreviateThis = (id === 'uCount');
+        el.textContent = fmt(abbreviateThis ? val : val);
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    Object.entries(targets).forEach(([id,val])=>{
+      const abbreviate = id === 'uCount';
+      animNum(id, val, 1500, abbreviate);
+    });
+
+    const APP_VERSION = "v1.4.3";
+    const verEl = document.getElementById("appVersion");
+    if (verEl) verEl.textContent = APP_VERSION;
+  </script>
+</body>
+</html>

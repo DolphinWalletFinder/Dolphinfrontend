@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#070b14"/>
+<title>Dolphin Wallet Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root{ --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89; --grid:#0e1628; --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60) }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:#eafaff; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    overflow-x:hidden; overflow-y:auto;
+    background:
+      radial-gradient(1200px 600px at 70% 20%, rgba(30,150,255,.10), transparent 60%),
+      radial-gradient(1000px 600px at 10% 80%, rgba(20,255,137,.10), transparent 60%),
+      linear-gradient(180deg,#060912,#05070e 40%,#04060c);
+  }
+  .stage{min-height:100%;position:relative;display:grid;place-items:center;padding:clamp(12px,4vw,32px)}
+  .hud{position:relative;width:min(1080px,96vw);display:grid;grid-template-columns:1.1fr 1.2fr;border-radius:24px;overflow:hidden;
+       background:linear-gradient(180deg,var(--panel),var(--panel2));
+       border:1px solid rgba(64,203,255,.25); box-shadow:inset 0 0 0 1px rgba(19,173,255,.06), 0 28px 90px rgba(0,0,0,.65)}
+  @media (max-width:980px){ .hud{grid-template-columns:1fr} }
+
+  .brand{position:relative;overflow:hidden;border-inline-start:1px solid rgba(64,203,255,.18)}
+  .brand .inner{height:100%;padding:24px;display:flex;flex-direction:column;justify-content:space-between}
+  .logo {max-width: 100%;height: auto;display: block;margin: 0 auto;}
+
+  .title{margin:14px 0 0; font-weight:800; letter-spacing:.12em; font-size:clamp(20px,2.2vw,28px);
+         background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text;white-space: nowrap;
+         color:transparent}
+
+  .form{position:relative}
+  .pane{padding:24px clamp(18px,4vw,36px); display:flex; flex-direction:column; gap:16px; height:100%}
+  .panel-mask{position:absolute;inset:12px;border-radius:18px;border:1px dashed rgba(32,205,255,.16);pointer-events:none;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+
+  .kicker{display:inline-flex;gap:8px;align-items:center;padding:.35rem .8rem;border-radius:999px;border:1px solid rgba(0,255,240,.25);background:rgba(0,20,28,.35);font-size:.82rem;font-weight:800;width:max-content}
+  .tabs{display:flex;gap:10px;margin-top:8px}
+  .tab{flex:1;text-align:center;padding:.7rem 1rem;border-radius:12px;border:1px solid rgba(64,203,255,.24);background:rgba(255,255,255,.04);font-weight:900;cursor:pointer;color:#eafaff;text-shadow:0 1px 0 rgba(0,0,0,.6)}
+  .tab[aria-selected="true"]{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.06));border-color:rgba(53,167,255,.7)}
+
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:980px){ form{grid-template-columns:1fr} }
+
+  .fg{display:flex;flex-direction:column;gap:8px; min-width:0}
+  .label{font-size:.95rem;color:rgba(190,245,255,.9)}
+  .control{position:relative}
+  .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.95}
+  .input{width:100%;padding:14px 44px 14px 44px;font-size:1rem;color:#eafaff;border-radius:12px;border:1px solid rgba(64,203,255,.28);
+         background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.02));outline:none;transition:border .18s ease, box-shadow .18s ease, background .18s ease; line-height:1.35; min-height:52px}
+  .input::placeholder{color:rgba(220,245,255,.52)}
+  .input:focus{border-color:rgba(53,167,255,.95);box-shadow:0 0 0 3px rgba(53,167,255,.28), 0 14px 28px rgba(0,0,0,.46);background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.04))}
+  .toggle-pass{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:#eafaff;font-weight:800;padding:6px 10px;border-radius:8px;cursor:pointer;text-shadow:0 1px 0 rgba(0,0,0,.6)}
+  .mode-toggle{display:inline-block;margin-top:6px;color:#9fefff;background:transparent;border:none;cursor:pointer;font-weight:800}
+  .error{min-height:16px;color:#ffb4b4;font-size:.85rem}
+
+  .cta{grid-column:1/-1;display:flex;gap:12px;align-items:center;margin-top:6px;flex-wrap:wrap}
+  .btn{flex:1;min-width:140px;border:none;border-radius:14px;position:relative;overflow:hidden;color:#001018;padding:16px 18px;font-weight:900;letter-spacing:.35px;text-transform:uppercase;background:linear-gradient(95deg,var(--c2),var(--c1),var(--c3),var(--c2));background-size:220% 100%;box-shadow:0 24px 50px rgba(53,167,255,.30), inset 0 0 0 1px rgba(0,0,0,.28);transition:transform .15s ease, box-shadow .15s ease, background-position .55s ease; text-shadow:0 1px 0 rgba(255,255,255,.45), 0 0 8px rgba(0,255,240,.25); text-align:center}
+  .btn:hover{transform:translateY(-1px);background-position:100% 0}
+  .btn:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+  .btn::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.35) 50%, rgba(255,255,255,0) 70%);transform:translateX(-120%);transition:transform .7s ease;mix-blend-mode:soft-light}
+  .btn:hover::after{transform:translateX(120%)}
+
+  .footer{width:min(1080px,96vw);margin:18px auto 0;text-align:center;color:rgba(190,245,255,.85);font-size:.86rem;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+
+  @media (max-width:640px){
+    .logo {max-width: 140px;}
+    .hud{width:100vw;border-radius:0}
+    .pane{padding:20px}
+    .input{min-height:56px;font-size:1.05rem}
+    .btn{padding:18px 20px;font-size:1.05rem}
+    .label{font-size:1.02rem}
+  }
+  @media (max-width:420px){
+    .icon{left:10px}
+    .input{padding-left:44px;padding-right:44px}
+    .title{letter-spacing:.08em}
+    .logo {max-width: 140px;}
+  }
+  .logo-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
+  }
+  @media (max-width: 600px){
+    .logo-wrap{
+      width:min(180px,60vw);
+      margin:0 auto;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="stage">
+    <section class="hud" role="main" aria-labelledby="brandTitle">
+      <aside class="brand">
+        <div class="inner">
+          <div>
+            <div class="logo-wrap">
+              <img src="../assets/logo.png" alt="Dolphin logo"/>
+            </div>
+          </div>
+          <h1 id="brandTitle" class="title">DOLPHIN WALLET FINDER</h1>
+        </div>
+      </aside>
+
+      <section class="form">
+        <div class="pane">
+          <span class="panel-mask" aria-hidden="true"></span>
+          <div class="kicker" id="formKicker" aria-hidden="true">Sign in to your account</div>
+
+          <div class="tabs" role="tablist">
+            <button id="tabSignIn" role="tab" class="tab" aria-selected="true">Sign In</button>
+            <button id="tabSignUp" role="tab" class="tab" aria-selected="false">Sign Up</button>
+          </div>
+
+          <button class="mode-toggle toggle" type="button" id="modeToggle">Not registered yet? Create an account</button>
+
+          <form id="accessForm" novalidate>
+            <!-- Username -->
+            <div class="fg" style="grid-column:1/-1">
+              <label class="label" for="username">Username</label>
+              <div class="control">
+                <span class="icon" aria-hidden="true">👤</span>
+                <input id="username" name="username" class="input" type="text"
+                       placeholder="Your username" autocomplete="username" required
+                       inputmode="latin" pattern="[A-Za-z]+"
+                       title="Username must contain only English letters (A–Z)"
+                       spellcheck="false" aria-describedby="userErr"/>
+                <small id="userErr" class="error" aria-live="polite"></small>
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="fg" style="grid-column:1/-1">
+              <label class="label" for="password">Password</label>
+              <div class="control">
+                <span class="icon" aria-hidden="true">🔒</span>
+                <input id="password" name="password" class="input" type="password" placeholder="Your password"
+                       autocomplete="current-password" required minlength="6"
+                       title="At least 6 characters with letters and numbers"
+                       aria-describedby="passErr"/>
+                <button type="button" class="toggle-pass" id="tgl">Show</button>
+                <small id="passErr" class="error" aria-live="polite"></small>
+              </div>
+            </div>
+
+            <!-- Register-only fields -->
+            <div id="registerFields" style="grid-column:1/-1; display:none">
+              <div class="fg">
+                <label class="label" for="confirm">Confirm Password</label>
+                <div class="control">
+                  <span class="icon" aria-hidden="true">✅</span>
+                  <input id="confirm" name="confirm" class="input" type="password" placeholder="Repeat password"
+                         autocomplete="new-password" aria-describedby="confirmErr"/>
+                  <small id="confirmErr" class="error" aria-live="polite"></small>
+                </div>
+              </div>
+
+              <div class="fg">
+                <label class="label" for="email">Email</label>
+                <div class="control">
+                  <span class="icon" aria-hidden="true">📧</span>
+                  <input id="email" name="email" class="input" type="email" placeholder="you@example.com"
+                         autocomplete="email" aria-describedby="emailErr"
+                         title="Enter a valid email like name@example.com"/>
+                  <small id="emailErr" class="error" aria-live="polite"></small>
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA row -->
+            <div class="cta">
+              <button class="btn" type="submit" id="formBtn">Login</button>
+              <div id="errorMessage" class="error" style="flex:1; min-height:unset"></div>
+            </div>
+          </form>
+
+          <!-- Forgot Password trigger + inline form (ADD-ONLY) -->
+          <button type="button" id="forgotToggle" class="mode-toggle" style="margin-top:4px">
+            Forgot your password?
+          </button>
+
+          <form id="forgotForm" style="display:none; margin-top:8px" novalidate>
+            <div class="fg">
+              <label class="label" for="fpEmail">Email</label>
+              <div class="control">
+                <span class="icon">📧</span>
+                <input id="fpEmail" class="input" type="email" placeholder="you@example.com" required />
+              </div>
+            </div>
+            <div class="fg">
+              <label class="label" for="fpNew">New Password</label>
+              <div class="control">
+                <span class="icon">🔑</span>
+                <input id="fpNew" class="input" type="password" placeholder="New password" required minlength="6" />
+              </div>
+            </div>
+            <div class="cta" style="margin-top:0">
+              <button class="btn" type="submit" id="forgotBtn">Reset Password</button>
+              <div id="forgotMsg" class="error" style="flex:1; min-height:unset"></div>
+            </div>
+          </form>
+          <!-- /Forgot Password -->
+        </div>
+      </section>
+    </section>
+    <div class="footer">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
+  </main>
+
+<script>
+  // Tabs + mode toggle keep in sync
+  let isRegisterMode = false;
+  const tabIn = document.getElementById('tabSignIn');
+  const tabUp = document.getElementById('tabSignUp');
+  const modeToggle = document.getElementById('modeToggle');
+  const regFields = document.getElementById('registerFields');
+  const formBtn = document.getElementById('formBtn');
+  const kicker = document.getElementById('formKicker');
+
+  function applyMode(){
+    const signin = !isRegisterMode;
+    tabIn.setAttribute('aria-selected', signin);
+    tabUp.setAttribute('aria-selected', !signin);
+    regFields.style.display = isRegisterMode ? 'contents' : 'none';
+    formBtn.textContent = isRegisterMode ? 'Register' : 'Login';
+    modeToggle.textContent = isRegisterMode ? 'Already registered? Login' : 'Not registered yet? Create an account';
+    kicker.textContent = isRegisterMode ? 'Create a new account' : 'Sign in to your account';
+    const pass = document.getElementById('password');
+    if (pass) pass.autocomplete = signin ? 'current-password' : 'new-password';
+  }
+  function toggleForm(){ isRegisterMode = !isRegisterMode; applyMode(); }
+  tabIn.addEventListener('click',()=>{ isRegisterMode=false; applyMode(); });
+  tabUp.addEventListener('click',()=>{ isRegisterMode=true; applyMode(); });
+  modeToggle.addEventListener('click', toggleForm);
+  applyMode();
+
+  // Show/Hide password button
+  (function(){
+    const input=document.getElementById('password');
+    const btn=document.getElementById('tgl');
+    if(btn && input){ btn.addEventListener('click',()=>{
+      input.type = input.type==='password'? 'text':'password';
+      btn.textContent = input.type==='password'? 'Show':'Hide';
+    }); }
+  })();
+
+  // ========== VALIDATION HELPERS ==========
+  const USERNAME_RE = /^[A-Za-z]+$/;                 // only English letters
+  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/; // >=6, letters + numbers
+  const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/; // simple valid email
+
+  function setFieldError(el, msg){
+    const errId = el.getAttribute('aria-describedby');
+    const errEl = errId ? document.getElementById(errId) : null;
+    if(errEl){ errEl.textContent = msg || ''; }
+    if (msg){ el.setAttribute('aria-invalid','true'); }
+    else { el.removeAttribute('aria-invalid'); }
+  }
+
+  function validateUsername(raw){
+    const value = raw.trim();
+    if(!value) return 'Username is required';
+    if(!USERNAME_RE.test(value)) return 'Username must contain only English letters (A–Z)';
+    return '';
+  }
+  function validatePassword(raw){
+    if(!raw) return 'Password is required';
+    if(!PASSWORD_RE.test(raw)) return 'Password must be at least 6 characters and contain both letters and numbers';
+    return '';
+  }
+  function validateEmail(raw){
+    const value = raw.trim();
+    if(!value) return 'Email is required';
+    if(!EMAIL_RE.test(value)) return 'Enter a valid email like name@example.com';
+    return '';
+  }
+
+  // Enforce username letters-only while typing
+  (function(){
+    const u = document.getElementById('username');
+    if(!u) return;
+    u.addEventListener('input', ()=>{
+      const cleaned = u.value.replace(/[^A-Za-z]/g, '');
+      if (u.value !== cleaned) {
+        const delta = u.value.length - cleaned.length;
+        const pos = typeof u.selectionStart === 'number' ? Math.max(0, u.selectionStart - delta) : cleaned.length;
+        u.value = cleaned;
+        if (typeof u.setSelectionRange === 'function') u.setSelectionRange(pos, pos);
+      }
+      setFieldError(u, validateUsername(u.value));
+    });
+  })();
+
+  // Live feedback for password / confirm / email
+  (function(){
+    const p = document.getElementById('password');
+    const c = document.getElementById('confirm');
+    const e = document.getElementById('email');
+
+    if(p) p.addEventListener('input', ()=> setFieldError(p, validatePassword(p.value)));
+    if(c) c.addEventListener('input', ()=>{
+      const msg = (c.value && p.value !== c.value) ? 'Passwords do not match!' : '';
+      setFieldError(c, msg);
+    });
+    if(e) e.addEventListener('input', ()=> setFieldError(e, validateEmail(e.value)));
+  })();
+
+  // === API integration ===
+  const BASE_URL = 'https://web-production-b86d.up.railway.app/api';
+
+  document.getElementById('accessForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const usernameEl = document.querySelector('input[name="username"]');
+    const passwordEl = document.querySelector('input[name="password"]');
+    const emailEl = document.querySelector('input[name="email"]');
+    const confirmEl = document.querySelector('input[name="confirm"]');
+    const errorMessage = document.getElementById('errorMessage');
+
+    errorMessage.textContent = '';
+
+    // Client-side validation
+    const uErr = validateUsername(usernameEl.value);
+    setFieldError(usernameEl, uErr);
+
+    const pErr = validatePassword(passwordEl.value);
+    setFieldError(passwordEl, pErr);
+
+    let eErr = '', cErr = '';
+    if (isRegisterMode) {
+      eErr = validateEmail(emailEl.value);
+      setFieldError(emailEl, eErr);
+
+      cErr = (confirmEl.value && passwordEl.value !== confirmEl.value) ? 'Passwords do not match!' : '';
+      setFieldError(confirmEl, cErr);
+    }
+
+    if (uErr || pErr || eErr || cErr) {
+      errorMessage.textContent = uErr || pErr || eErr || cErr;
+      return;
+    }
+
+    const username = usernameEl.value.trim();
+    const password = passwordEl.value;
+
+    if (isRegisterMode) {
+      const email = emailEl.value.trim();
+
+      // Register first
+      fetch(`${BASE_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Auto-login after successful registration
+          return fetch(`${BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+        } else {
+          throw new Error(data.error || 'Registration failed');
+        }
+      })
+      .then(res => res.json())
+      .then(loginData => {
+        if (loginData && loginData.token) {
+          localStorage.setItem('token', loginData.token);
+          window.location.href = '../pages/scan.html';
+        } else {
+          errorMessage.textContent = 'Login after registration failed';
+        }
+      })
+      .catch(err => {
+        errorMessage.textContent = err.message || 'Server error occurred.';
+      });
+
+    } else {
+      // Sign In flow
+      fetch(`${BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) { errorMessage.textContent = data.error; return; }
+
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          try {
+            const payload = JSON.parse(atob(data.token.split('.')[1] || '')) || {};
+            const role = payload.role || 'user';
+            localStorage.setItem('role', role);
+            localStorage.setItem('username', payload.username || username);
+
+            if (role === 'admin') { window.location.href = '../pages/admin-licenses.html'; return; }
+
+            fetch(`${BASE_URL}/my-wallet`, { headers: { 'Authorization': 'Bearer ' + data.token } })
+            .then(res => res.json())
+            .then(walletData => {
+              if (walletData.wallet) {
+                window.location.href = '../pages/results.html';
+              } else {
+                window.location.href = '../pages/scan.html';
+              }
+            })
+            .catch(() => { window.location.href = '../pages/scan.html'; });
+          } catch(err){
+            // Token parse error – fallback
+            window.location.href = '../pages/scan.html';
+          }
+        }
+      })
+      .catch(() => errorMessage.textContent = 'Server error occurred.');
+    }
+  });
+
+  // ======== Forgot Password minimal flow (ADD-ONLY) ========
+  (function(){
+    const forgotToggle = document.getElementById('forgotToggle');
+    const forgotForm   = document.getElementById('forgotForm');
+    const fpEmail      = document.getElementById('fpEmail');
+    const fpNew        = document.getElementById('fpNew');
+    const forgotBtn    = document.getElementById('forgotBtn');
+    const forgotMsg    = document.getElementById('forgotMsg');
+
+    if (!forgotToggle || !forgotForm) return;
+
+    // Toggle visibility
+    forgotToggle.addEventListener('click', ()=>{
+      forgotForm.style.display = (forgotForm.style.display === 'none' || !forgotForm.style.display) ? 'grid' : 'none';
+      if (forgotForm.style.display === 'grid') {
+        forgotMsg.textContent = '';
+        forgotMsg.style.color = '#ffb4b4';
+      }
+    });
+
+    // Submit handler
+    forgotForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      forgotMsg.textContent = '';
+
+      const email = (fpEmail.value || '').trim();
+      const new_password = fpNew.value || '';
+
+      if (!email || !new_password) {
+        forgotMsg.textContent = 'Email and new password are required';
+        return;
+      }
+
+      try {
+        forgotBtn.disabled = true;
+        forgotBtn.textContent = 'Resetting…';
+
+        const res = await fetch(`${BASE_URL}/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ email, new_password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        forgotMsg.style.color = '#99ffcc';
+        forgotMsg.textContent = 'Password updated. You can sign in now.';
+        forgotBtn.textContent = 'Reset Password';
+        forgotBtn.disabled = false;
+
+        setTimeout(()=>{
+          forgotForm.style.display = 'none';
+          forgotMsg.textContent = '';
+          fpNew.value = '';
+        }, 1200);
+
+      } catch (err) {
+        forgotMsg.style.color = '#ffb4b4';
+        forgotMsg.textContent = err.message || 'Reset failed';
+        forgotBtn.textContent = 'Reset Password';
+        forgotBtn.disabled = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DOLPHIN WALLET FINDER — Pro Ops</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89; --grid:#0e1628; --panel:rgba(10,16,26,.65); --panel2:rgba(6,12,20,.55) }
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 70% 20%,rgba(30,150,255,.06),transparent 60%),
+      radial-gradient(1000px 600px at 10% 80%,rgba(0,255,200,.06),transparent 60%),
+      linear-gradient(180deg,#060912,#05070e 40%,#04060c);
+    color:#dffbff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;overflow-x:hidden
+  }
+  .stars:before,.stars:after{content:"";position:absolute;inset:0;pointer-events:none;background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.35), transparent 60%),
+    radial-gradient(1px 1px at 80% 40%, rgba(255,255,255,.28), transparent 60%),
+    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,.22), transparent 60%),
+    radial-gradient(1px 1px at 30% 85%, rgba(255,255,255,.26), transparent 60%),
+    radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,.20), transparent 60%);opacity:.22}
+  .grid-bg{position:absolute;inset:0;pointer-events:none;opacity:.23;background-image:
+    linear-gradient(transparent 31px, var(--grid) 32px),
+    linear-gradient(90deg, transparent 31px, var(--grid) 32px);
+    background-size:32px 32px;mask-image: radial-gradient(75% 65% at 50% 50%, #000 65%, transparent)}
+  .scanline{position:absolute;left:0;right:0;height:120px;pointer-events:none;background:linear-gradient(180deg,transparent, rgba(0,255,255,.08), transparent);animation:scan 6s linear infinite;mix-blend-mode:screen;filter:blur(.5px)}
+  @keyframes scan{0%{top:-140px;opacity:0}20%{opacity:.28}50%{top:calc(100% - 70px);opacity:.18}80%{opacity:.28}100%{top:100%;opacity:0}}
+
+  .hud-panel{position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid rgba(64,203,255,.25);box-shadow:inset 0 0 0 1px rgba(19,173,255,.06),0 10px 28px -18px rgba(0,0,0,.6);backdrop-filter:blur(6px) saturate(140%)}
+  .hud-panel:before{content:"";position:absolute;inset:10px;border-radius:14px;border:1px dashed rgba(32,205,255,.16);pointer-events:none;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+  .title{font-family:Orbitron,Inter,sans-serif;letter-spacing:.12em}
+  .btn{border-radius:14px;border:1px solid rgba(26,236,255,.45);color:#cfffff;background:linear-gradient(180deg,rgba(10,18,28,.8),rgba(6,12,20,.85));padding:.7rem 1rem;font-weight:700}
+
+  .control-bar{position:sticky;top:0;z-index:20;backdrop-filter:blur(6px) saturate(140%);background:linear-gradient(180deg,rgba(5,10,18,.75),rgba(6,12,20,.6));border:1px solid rgba(26,236,255,.25);border-radius:12px}
+  .control-bar .btn{min-width:110px}
+
+  .line-wrap{position:relative;width:100%;aspect-ratio:21/6;min-height:180px}
+  .line-wrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;filter:drop-shadow(0 0 6px rgba(0,255,240,.3))}
+
+  #mevWrap{position:relative;width:100%;height:240px;min-height:unset!important;aspect-ratio:unset!important;}
+  #mevCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;filter:drop-shadow(0 0 6px rgba(0,255,240,.25))}
+
+  .bar{height:8px;border-radius:8px;background:rgba(0,148,180,.35);width:100%}
+  .bar>div{height:8px;border-radius:8px;background:linear-gradient(90deg,#35a7ff,#0ff1e7);transform-origin:0 50%}
+
+  .ring{position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center}
+  .ring svg{position:absolute;inset:0}
+  .metric-card{display:flex;flex-direction:column;justify-content:space-between}
+  .metric-card.center{align-items:center;text-align:center}
+  .metric-title{font-size:.85rem;color:rgba(190,245,255,.78)}
+  .metric-value{font-size:2.1rem;line-height:1.1;font-weight:800;color:#dffbff}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:.12rem .45rem;border-radius:999px;border:1px solid rgba(0,255,240,.25);background:rgba(0,20,28,.35);margin-left:.45rem;font-weight:700}
+  .badge[data-chain="BTC"]{border-color:#f7931a;color:#ffb775}
+  .badge[data-chain="ETH"]{border-color:#627eea;color:#9ab0ff}
+  .badge[data-chain="SOL"]{border-color:#00ffa3;color:#90ffd7}
+  .badge[data-chain="BNB"]{border-color:#f3ba2f;color:#ffd77f}
+  .badge[data-chain="TRX"]{border-color:#ff073a;color:#ff8096}
+  .pill{padding:.25rem .5rem;border-radius:999px;border:1px solid rgba(0,255,240,.25);background:rgba(0,20,28,.35);font-size:.7rem}
+
+  .w-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+  .w-stage{height:6px;border-radius:6px;background:rgba(0,148,180,.25);overflow:hidden}
+  .w-stage>div{height:100%;background:linear-gradient(90deg,#35a7ff,#0ff1e7);transform-origin:left center}
+
+  .micro{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 6px rgba(0,255,240,.1)}
+  .micro>span{font-weight:800;color:#dffbff}
+
+  .kbd{font-family:ui-monospace, Menlo, Consolas, "Courier New", monospace}
+
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:rgba(4,12,20,.85);border:1px solid rgba(26,236,255,.35);padding:.5rem .75rem;border-radius:.75rem;opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+
+  .pro-col{display:flex;flex-direction:column;height:100%}
+  .pro-panel{display:flex;flex-direction:column;height:100%}
+  .pro-panel .scroll-area{flex:1 1 auto;min-height:0;overflow:auto;overflow-x:hidden}
+  .minh-balanced{min-height:auto}
+  @media(min-width:1024px){ .minh-balanced{min-height:auto} }
+
+  .logo { width: 80px; }
+  /* MEV GAP FIX */
+  #mevWrap{flex:0 0 auto!important;margin-bottom:0!important;padding-bottom:0!important}
+
+  /* MEV HEIGHT OVERRIDE */
+  #mevWrap{height:240px!important}
+  @media(min-width:1024px){ .minh-balanced{min-height:auto!important} }
+  /* NO-GAP OVERRIDES */
+  .minh-balanced{min-height:auto !important}
+  @media(min-width:1024px){ .minh-balanced{min-height:auto !important} }
+  #mevWrap{position:relative;width:100%;height:240px;min-height:unset!important;aspect-ratio:unset!important;}
+
+
+  #mevList { display:flex;flex-direction:column;gap:10px; max-height:580px; overflow:auto; overflow-x:hidden; }
+  .mev-row{
+    --accent:#0ff1e7;
+    position:relative; border-radius:12px; padding:10px 12px;
+    background:linear-gradient(180deg,rgba(8,16,24,.65),rgba(6,12,20,.6));
+    border:1px dashed color-mix(in oklab, var(--accent) 45%, transparent);
+    box-shadow:inset 0 0 0 1px rgba(19,173,255,.05);
+    display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+    animation:itemIn .35s ease-out;
+  }
+  .mev-row .asset{font-weight:800; color:rgba(210,245,255,.95); letter-spacing:.04em; min-width:56px}
+  .mev-row .tactic{padding:.18rem .55rem; border-radius:999px; font-weight:700; font-size:.75rem; border:1px solid color-mix(in oklab, var(--accent) 45%, transparent); background:rgba(0,20,28,.45)}
+  .mev-row .gain{font-weight:900; font-size:1.05rem; color:color-mix(in oklab, var(--accent) 80%, white); text-shadow:0 0 10px color-mix(in oklab, var(--accent) 35%, transparent)}
+  .mev-row .desc{grid-column:1 / -1; font-size:.72rem; color:rgba(210,245,255,.85)}
+  .type-frontrun{ --accent:#ff9900; } .type-backrun { --accent:#33ccff; } .type-arb { --accent:#14ff89; }
+  .mev-row:before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.07;
+    background:linear-gradient(90deg,transparent 0 15%, color-mix(in oklab, var(--accent) 70%, white) 50%, transparent 85 100%);
+    transform:translateX(-100%); animation:scanBar 2.6s linear infinite;
+  }
+  @keyframes itemIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
+  @keyframes scanBar{ 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+  /* Idle state */
+  .idle .data-live{visibility:hidden}
+  .idle .panel-mask::after{
+    content:"System idle — press Start"; position:absolute; inset:0; display:grid; place-items:center;
+    color:rgba(190,245,255,.85); font-family:Orbitron,Inter; letter-spacing:.12em; font-size:.9rem;
+    background:linear-gradient(180deg, rgba(0,0,0,.0), rgba(0,0,0,.05));
+  }
+
+  /* Matrix zone */
+  .matrix-safe{
+    position:absolute;
+    left:12px; right:12px; top:48px;
+    bottom:150px;
+    pointer-events:none;
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .matrix-safe canvas{position:absolute; inset:0}
+
+  /* Whale seed dots */
+  .seed-info{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .slot-row{display:flex;gap:3px}
+  .slot-dot{width:6px;height:6px;border-radius:50%;background:rgba(0,255,220,.18);box-shadow:inset 0 0 0 1px rgba(0,255,240,.25)}
+  .slot-dot.on{background:linear-gradient(180deg,#35a7ff,#0ff1e7);box-shadow:0 0 8px rgba(0,255,240,.6)}
+  .brand-chip{padding:.14rem .5rem;border-radius:999px;border:1px solid rgba(0,255,240,.25);background:rgba(0,20,28,.45);font-size:.72rem;font-weight:700}
+  .w-item .micro{position:relative}
+  .w-item .micro:after{content:"";position:absolute;inset:10%;border-radius:50%;box-shadow:0 0 12px rgba(0,255,240,.25);pointer-events:none}
+
+/* allow middle columns in grid rows to shrink so text stays inside boxes */
+.mev-row,
+.w-item { grid-template-columns: auto minmax(0,1fr) auto; }
+
+/* prevent grid children from forcing overflow */
+.mev-row > *,
+.w-item > * { min-width: 0; }
+
+/* scale titles and numbers adaptively */
+.metric-title { font-size: clamp(.68rem, 2.6vw, .85rem); }
+.metric-value { font-size: clamp(1rem, 7vw, 2.1rem); line-height: 1.1; }
+
+/* long texts truncate safely inside list items */
+.w-item span,
+.w-item .brand-chip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* whale list: ensure full visibility with scroll on mobile */
+#whaleList { max-height: 70vh; overflow: auto; }
+.pro-panel .scroll-area { min-height: 0; }
+
+/* mobile layout: make tight 3-column KPI blocks become 2 columns */
+@media (max-width: 640px){
+  #tacticalPanel .grid.grid-cols-3 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+  .metric-value { font-size: clamp(.95rem, 6vw, 1.6rem); }
+}
+</style>
+</head>
+<body>
+  <div class="stars absolute inset-0"></div>
+  <div class="grid-bg"></div>
+  <div class="scanline"></div>
+
+  <!-- Header -->
+  <header class="relative z-10 max-w-[1200px] mx-auto pt-5 px-4">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <img src="../assets/logo.png" alt="DOLPHIN WALLET FINDER logo" class="logo" />
+        <h1 class="title text-cyan-100 text-[20px] md:text-[24px]">DOLPHIN WALLET FINDER</h1>
+      </div>
+      <div class="text-xs text-cyan-200/70"><span id="username">User</span></div>
+    </div>
+  </header>
+
+  <!-- Control Bar -->
+  <section class="relative z-10 max-w-[1200px] mx-auto px-4 mt-4">
+    <div id="controlBar" class="control-bar px-4 py-3 flex items-center justify-center gap-3">
+      <button id="btnStart" class="btn" aria-pressed="false">Start</button>
+      <button id="btnStop" class="btn opacity-50 pointer-events-none" aria-pressed="true">Stop</button>
+    </div>
+
+     <!-- Net Alert -->
+  <div id="netAlert"
+       class="mt-3 hidden px-4 py-2 rounded-md border text-sm font-bold
+              border-red-400/50 bg-red-500/10 text-red-200
+              shadow-[0_0_0_1px_rgba(255,80,80,.08)]"
+       role="status" aria-live="assertive" aria-hidden="true">
+    <span>Internet connection is lost. Please check your connection.</span>
+  </div>
+  </section>
+
+  <!-- MAIN -->
+  <main id="appMain" class="relative z-10 max-w-[1200px] mx-auto px-4 pb-8 idle">
+    <div class="grid grid-cols-12 gap-5 mt-5">
+
+      <!-- RADAR -->
+      <section class="col-span-12 lg:col-span-5 space-y-5">
+        <div class="hud-panel p-5 panel-mask">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="title text-cyan-100 text-sm md:text-base tracking-widest">BLOCKCHAIN RADAR</h3>
+          </div>
+
+          <div class="space-y-4 data-live">
+            <div id="hexRadar" class="relative w-full aspect-square rounded-xl overflow-hidden border border-cyan-400/30">
+              <!-- base 6 -->
+              <canvas id="gridCanvas"   class="absolute inset-0"></canvas>
+              <canvas id="dotsCanvas"   class="absolute inset-0"></canvas>
+              <canvas id="sweepCanvas"  class="absolute inset-0"></canvas>
+              <canvas id="ringsCanvas"  class="absolute inset-0"></canvas>
+              <canvas id="netCanvas"    class="absolute inset-0"></canvas>
+              <canvas id="pulseCanvas"  class="absolute inset-0"></canvas>
+              <!-- +9 enhanced -->
+              <canvas id="sectorCanvas" class="absolute inset-0"></canvas>
+              <canvas id="triCanvas"    class="absolute inset-0"></canvas>
+              <canvas id="blipCanvas"   class="absolute inset-0"></canvas>
+              <canvas id="trailCanvas"  class="absolute inset-0"></canvas>
+              <canvas id="heatCanvas"   class="absolute inset-0"></canvas>
+              <canvas id="sparkCanvas"  class="absolute inset-0"></canvas>
+              <canvas id="polarCanvas"  class="absolute inset-0"></canvas>
+              <!-- labelCanvas removed -->
+              <canvas id="glowCanvas"   class="absolute inset-0"></canvas>
+              <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(0,255,240,.8)]"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="hud-panel p-3 metric-card"><div class="text-xs text-cyan-200/70">Hashrate</div><div id="hashrate" class="text-cyan-100 text-lg">—</div></div>
+              <div class="hud-panel p-3 metric-card"><div class="text-xs text-cyan-200/70">Block Height</div><div id="blockHeight" class="text-cyan-100 text-lg">—</div></div>
+              <div class="hud-panel p-3 metric-card"><div class="text-xs text-cyan-200/70">Wallets Detected</div><div class="text-cyan-100 text-lg"><span id="wallets">—</span></div></div>
+              <div class="hud-panel p-3 metric-card"><div class="text-xs text-cyan-200/70">Wallet Integrity</div><div id="walletIntegrity" class="text-cyan-100 text-lg">—</div></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="hud-panel p-3 metric-card"><div class="text-xs text-cyan-200/70">Mempool Size</div><div id="mempool" class="text-cyan-100 text-lg">—</div></div>
+              <div class="hud-panel p-3 metric-card"><div class="text-xs text-cyan-200/70">Gas Price</div><div id="gas" class="text-cyan-100 text-lg">—</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TACTICAL + LOG -->
+      <section class="col-span-12 lg:col-span-7 space-y-5">
+        <div id="tacticalPanel" class="hud-panel p-5 relative panel-mask">
+          <div class="flex items-center justify-between mb-3 relative z-10">
+            <h3 class="title text-cyan-100 text-sm md:text-base tracking-widest">TACTICAL OVERVIEW</h3>
+          </div>
+
+          <!-- Matrix (bounded) -->
+          <div class="matrix-safe data-live">
+            <canvas id="matrixRain"></canvas>
+            <canvas id="matrixRainTop"></canvas>
+          </div>
+
+          <!-- Full-width wave -->
+          <div class="line-wrap relative z-10 data-live">
+            <canvas id="lineCanvas"></canvas>
+          </div>
+
+          <!-- KPIs -->
+          <div class="mt-4 grid grid-cols-3 gap-3 relative z-10 data-live">
+            <div class="hud-panel p-3 metric-card center"><div class="metric-title">Network Latency</div><div id="latency" class="metric-value">—</div></div>
+            <div class="hud-panel p-3 metric-card center"><div class="metric-title">TX Throughput</div><div id="throughput" class="metric-value">—</div></div>
+            <div class="hud-panel p-3 metric-card center"><div class="metric-title">Invalid TX</div><div id="invalidTx" class="metric-value">—</div></div>
+          </div>
+        </div>
+
+        <div class="hud-panel p-5 panel-mask">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="title text-cyan-100 text-sm md:text-base tracking-widest">SCAN LOG</h3>
+            <span class="pill">global wallet sweep</span>
+          </div>
+          <div id="scanLog" class="data-live text-xs md:text-sm text-cyan-100/85 space-y-1 max-h-80 overflow-auto pr-1 kbd" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- SYSTEM STATUS -->
+      <section class="col-span-12">
+        <div class="hud-panel p-5 panel-mask">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="title text-cyan-100 text-sm md:text-base tracking-widest">SYSTEM STATUS</h3>
+          </div>
+          <div class="grid grid-cols-12 gap-5 items-stretch data-live">
+            <div class="col-span-12 md:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-3 items-stretch">
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Consensus Strength</div><div id="consensusValue" class="metric-value">—</div><div class="bar mt-3"><div id="consensusBar" style="width:0%"></div></div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Transaction Load</div><div id="txLoad" class="metric-value">—</div><div class="bar mt-3"><div id="txBar" style="width:0%"></div></div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Network Congestion</div><div id="netCong" class="metric-value">—</div><div class="bar mt-3"><div id="congBar" style="width:0%"></div></div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Scan Time</div><div id="scanTimer" class="metric-value font-mono">00:00:00</div><div class="text-[10px] text-cyan-200/60 mt-1">Active only while scanning</div></div>
+            </div>
+            <div class="col-span-12 md:col-span-4 flex items-center justify-center">
+              <div class="hud-panel p-4 w-full flex items-center justify-center">
+                <div class="ring">
+                  <svg viewBox="0 0 120 120">
+                    <defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--c1)"/><stop offset="100%" stop-color="var(--c2)"/></linearGradient></defs>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,255,240,.15)" stroke-width="10"/>
+                    <circle id="ringProgress" cx="60" cy="60" r="50" fill="none" stroke="url(#ring)" stroke-width="10" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314"/>
+                  </svg>
+                  <div class="text-center">
+                    <div id="ringValue" class="text-3xl text-cyan-100 font-bold">0%</div>
+                    <div class="text-xs text-cyan-200/70 tracking-widest">ATTACK FEASIBILITY</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>          
+        </div>
+      </section>
+
+      <!-- PRO MODULES -->
+      <section class="col-span-12 grid grid-cols-12 gap-5">
+        <!-- Whale -->
+        <div class="col-span-12 lg:col-span-6 pro-col">
+          <div class="hud-panel p-5 pro-panel minh-balanced panel-mask">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="title text-cyan-100 text-sm md:text-base tracking-widest">WHALE BREACH CONSOLE</h3>
+              <div class="pill">top wallets</div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-3 data-live">
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Active Targets</div><div id="whActive" class="metric-value">0</div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">High-Value</div><div id="whHigh" class="metric-value">0</div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Breach Attempts</div><div id="whAttempts" class="metric-value">0</div></div>
+            </div>
+            <div id="whaleList" class="scroll-area space-y-2 data-live"></div>
+          </div>
+        </div>
+
+        <!-- MEV -->
+        <div class="col-span-12 lg:col-span-6 pro-col">
+          <div class="hud-panel p-5 pro-panel minh-balanced panel-mask">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="title text-cyan-100 text-sm md:text-base tracking-widest">MEV OPS LAB</h3>
+              <div class="pill">mempool tactics</div>
+            </div>
+            <div id="mevWrap" class="scroll-area data-live">
+              <canvas id="mevCanvas"></canvas>
+            </div>
+            <div class="mt-3 grid grid-cols-3 gap-3 data-live">
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Opp Rate</div><div id="mevRate" class="metric-value">0.0/s</div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Win Rate</div><div id="mevWin" class="metric-value">0%</div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Extracted</div><div id="mevVal" class="metric-value">0.0M</div></div>
+            </div>
+            <div id="mevList" class="mt-3 kbd text-[12px] data-live"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="relative z-10 max-w-[1200px] mx-auto px-4 py-6 text-center">
+    <div class="flex flex-col items-center gap-2 opacity-80">
+      <img src="../assets/logo.png" alt="DOLPHIN WALLET FINDER logo" class="w-12 h-auto" />
+      <p class="copy text-sm font-medium">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5z" fill="var(--c1)" opacity=".9"/></svg>
+    <span id="toastText" class="text-cyan-50">Ready</span>
+  </div>
+
+<script>
+  const API_BASE = "/api";
+  const token = localStorage.getItem("token");
+  if (!token) window.location.href = "login.html";
+
+  fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
+
+async function apiGET(path){
+  const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: "Bearer " + token } });
+  if(!res.ok) throw new Error('API error');
+  return res.json();
+}
+async function apiPOST(path, body={}){
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', Authorization: "Bearer " + token },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error('API error');
+  return res.json();
+}
+
+// ---- Server-driven scan status polling ----
+let statusTimer = null;
+async function startStatusPolling(){
+  stopStatusPolling();
+  statusTimer = setInterval(fetchAndSyncScanStatus, 1000);
+}
+function stopStatusPolling(){
+  if(statusTimer) clearInterval(statusTimer);
+  statusTimer = null;
+}
+async function fetchAndSyncScanStatus(){
+  try{
+    const { scan } = await apiGET('/scan/status');
+    Core.elapsedMs = scan?.elapsed_ms || 0;
+    Core.walletsTotal = scan?.total_scanned || 0;
+    walletsEl.textContent = formatCount(Core.walletsTotal);
+    fitTextId(walletsEl);
+    scanTimerEl.textContent = formatHMS(Core.elapsedMs);
+    fitTextId(scanTimerEl);
+
+    const serverRunning = scan?.status === 'running';
+    if (serverRunning && !RUNNING){
+      RUNNING = true; Core.running = true;
+      document.getElementById('appMain').classList.remove('idle');
+      btnStart.classList.add('opacity-50','pointer-events-none');
+      btnStop.classList.remove('opacity-50','pointer-events-none');
+    } else if (!serverRunning && RUNNING){
+      RUNNING = false; Core.running = false;
+      btnStart.classList.remove('opacity-50','pointer-events-none');
+      btnStop.classList.add('opacity-50','pointer-events-none');
+    }
+  }catch(e){ /* swallow to be resilient */ }
+}
+
+    .then(res => res.json())
+    .then(data => {
+      const el = document.getElementById("username");
+      if (el) el.textContent = data?.username || "User";
+    })
+    .catch(() => {});
+
+/* ================= SETTINGS ================= */
+const SETTINGS = {
+  assets: ['BTC','ETH','SOL','BNB','TRX'],
+  log: { tickMs: 100, burstMin: 1, burstMax: 2, maxDom: 900 },
+  theme: { c1:'#0ff1e7', c2:'#35a7ff', c3:'#14ff89', grid:'#0e1628' },
+  dominance: { BTC:0.70, ETH:0.10, SOL:0.07, BNB:0.07, TRX:0.06 },
+  scan: { hourlyMin: 34800, hourlyMax: 43860, jitter: 0.04 }, // exact window
+
+  radar: {
+    clustersPerAsset: [2,3],
+    blipsPerCluster:  [4,6],
+    ringBands:        [0.28,0.92],
+    hitEpsilonRad:    0.045,
+    rangeEpsilon:     0.08,
+    labelTopN:        6,
+    sweepSpeedBase:   0.85,
+    sweepSpeedScale:  1.3,
+    echoRings:        3
+  },
+  matrix: {
+    burstChance: 0.06,
+    maxAccel:    1.05,
+    glowLead:    6
+  }
+};
+(()=>{ const r=document.documentElement.style; r.setProperty('--c1',SETTINGS.theme.c1); r.setProperty('--c2',SETTINGS.theme.c2); r.setProperty('--c3',SETTINGS.theme.c3); r.setProperty('--grid',SETTINGS.theme.grid); })();
+
+/* ================= HELPERS ================= */
+const $=id=>document.getElementById(id);
+const toast=$('toast'), toastText=$('toastText'); let toastTimer;
+function showToast(msg){ toastText.textContent=msg; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('show'),1500); }
+const rand=(a,b)=>Math.random()*(b-a)+a, randi=(a,b)=>Math.floor(rand(a,b));
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+const hex=n=>Array.from({length:n},()=>Math.floor(Math.random()*16).toString(16)).join('');
+function maskMid(s,h=6,t=4){return s.length<=h+t?s:s.slice(0,h)+'…'+s.slice(-t);}
+function formatCount(n){ return Number(n||0).toLocaleString('en-US'); }
+function hexToRGBA(hex, a=1){ let c=hex.replace('#',''); if(c.length===3){ c=c.split('').map(x=>x+x).join(''); } const n=parseInt(c,16), r=(n>>16)&255, g=(n>>8)&255, b=n&255; return `rgba(${r},${g},${b},${a})`; }
+function fitTextId(el){ if(!el) return; el.style.fontSize=""; const base=parseFloat(getComputedStyle(el).fontSize)||18; let fs=base, guard=10; while(el.scrollWidth>el.clientWidth && guard--){ fs*=0.9; el.style.fontSize=fs+"px"; } }
+const FIT_IDS = ["hashrate","blockHeight","wallets","walletIntegrity","mempool","gas","latency","throughput","invalidTx","consensusValue","txLoad","netCong","scanTimer","ringValue","whActive","whHigh","whAttempts","mevRate","mevWin","mevVal"];
+
+/* ================= PERSISTENCE ================= */
+const PERSIST_KEY='dolphin_state_v4';
+const Persist={ save(s){try{localStorage.setItem(PERSIST_KEY,JSON.stringify(s));}catch(e){}}, load(){try{const x=localStorage.getItem(PERSIST_KEY);return x?JSON.parse(x):null;}catch(e){return null;} } };
+
+/* ================= ADDRESS GEN ================= */
+const B58='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function randB58(len){let s=''; for(let i=0;i<len;i++) s+=B58[(Math.random()*B58.length)|0]; return s;}
+function btc(){ const t=Math.random(); if(t<.45) return '1'+randB58(randi(25,33)); if(t<.9) return '3'+randB58(randi(25,33)); const be='023456789acdefghjklmnpqrstuvwxyz'; let s='bc1q'; for(let i=0;i<randi(30,45);i++) s+=be[(Math.random()*be.length)|0]; return s; }
+function evm(){ return '0x'+hex(40); }
+function sol(){ return randB58(randi(32,44)); }
+function trx(){ return 'T'+randB58(33); }
+function pickChain(){ const r=Math.random(); let acc=0; for(const [ch,p] of Object.entries(SETTINGS.dominance)){ acc+=p; if(r<=acc) return {chain:ch, gen: ch==='BTC'?btc:(ch==='SOL'?sol:(ch==='TRX'?trx:evm))}; } return {chain:'BTC', gen:btc}; }
+
+/* ================= DPI SAFE ================= */
+function setCanvasSize(canvas,ctx,w,h){ const dpr=Math.min(2,window.devicePixelRatio||1); canvas.width=Math.max(1,Math.floor(w*dpr)); canvas.height=Math.max(1,Math.floor(h*dpr)); canvas.style.width=w+'px'; canvas.style.height=h+'px'; ctx && ctx.setTransform(dpr,0,0,dpr,0,0); }
+
+/* ================= MATRIX (crypto waterfall) ================= */
+const tacticalPanel=$('tacticalPanel'),
+      matrix=$('matrixRain'), mctx=matrix.getContext('2d',{alpha:true}),
+      matrixTop=$('matrixRainTop'), mctxTop=matrixTop.getContext('2d',{alpha:true});
+const matrixWrap = document.querySelector('#tacticalPanel .matrix-safe');
+
+const BIP39 = ["abandon","ability","access","account","adapt","address","advance","agent","alert","alpha","asset","attack","audit","balance","battery","beach","binary","block","bridge","bundle","cable","camera","cancel","canvas","capital","card","cargo","castle","chain","charge","check","cipher","client","cloud","code","coin","contract","control","core","crystal","data","decide","deploy","detect","device","digital","document","domain","double","draft","drive","dump","dynamic","echo","edge","elegant","element","enable","energy","engine","enhance","enter","entity","entry","equal","erase","error","escape","ethics","evidence","exchange","expand","expect","expose","extend","fabric","fee","field","figure","file","filter","final","finger","flash","flow","force","fork","frame","friend","front","future","gain","gate","gather","gauge","genesis","glow","govern","graph","grid","guard","hash","height","hold","host","image","index","input","install","intact","invest","invite","key","keccak","ledger","level","limit","link","list","lock","log","logic","loop","lottery","major","market","mask","matrix","maximum","mempool","merge","method","miner","model","monitor","motion","network","node","nonce","opcode","oracle","packet","proof","query","quote","relay","reward","root","scan","seed","secure","sign","slot","state","storage","swap","task","token","trace","trade","tx","update","verify","wallet","worker","zk"];
+const GLY_HEX = "0123456789ABCDEF";
+const GLY_ADDR = ()=>"0x"+hex(8).toUpperCase();
+const GLY_B58  = ()=>randB58(8);
+const OPCODES  = ["PUSH1","PUSH2","ADD","SUB","MUL","DIV","SHA3","LOG","CALL","SLOAD","SSTORE","JUMP","REVERT","EQ","LT","GT","DUP","SWAP"];
+
+let matrixPulse=0;
+
+const Matrix = {
+  layers:[
+    { ctx:mctx,    canvas:matrix,    fontMul:0.94, speed:[0.35,0.50],  kind:"hex"  },
+    { ctx:mctxTop, canvas:matrixTop, fontMul:1.10, speed:[0.25,0.38],  kind:"addr" },
+    { ctx:mctxTop, canvas:matrixTop, fontMul:0.98, speed:[0.30,0.45],  kind:"bip"  }
+  ],
+  resize(){
+    const r=matrixWrap.getBoundingClientRect();
+    [[matrix,mctx],[matrixTop,mctxTop]].forEach(([c,ctx])=>setCanvasSize(c,ctx,r.width|0,r.height|0));
+    this.layers.forEach(L=>{
+      const W=L.canvas.clientWidth;
+      L.font=Math.max(13,(W/88)|0)*L.fontMul; L.colW=(L.font*1.08)|0; L.ctx.font=`${L.font}px ui-monospace,monospace`;
+      L.cols=Math.max(12,(W/L.colW)|0);
+      L.state=Array(L.cols).fill(0).map(()=>({
+        y: Math.floor(Math.random()*(L.canvas.clientHeight/L.font)),
+        v: rand(L.speed[0],L.speed[1]),
+        tail: randi(10,16),
+        seq: Matrix.makeSeq(L.kind),
+        off: 0,
+        tint: `hsla(${randi(165,190)},70%,70%,`
+      }));
+    });
+    mctx.clearRect(0,0,matrix.clientWidth,matrix.clientHeight);
+    mctxTop.clearRect(0,0,matrixTop.clientWidth,matrixTop.clientHeight);
+  },
+  makeSeq(kind){
+    if(kind==="hex")    return GLY_HEX;
+    if(kind==="opcode") return OPCODES[randi(0,OPCODES.length)];
+    if(kind==="addr")   return Math.random()<0.5?GLY_ADDR():GLY_B58();
+    if(kind==="bip")    return BIP39[randi(0,BIP39.length)].toUpperCase();
+    return "DATA";
+  },
+  update(dt,now){
+    if(!Core.running) return;
+    this.draw(dt, now/1000);
+  },
+  draw(dt,time){
+    // subtle persistence for depth
+    mctx.fillStyle='rgba(0,10,18,0.04)'; mctx.fillRect(0,0,matrix.clientWidth,matrix.clientHeight);
+    mctxTop.fillStyle='rgba(0,10,18,0.04)'; mctxTop.fillRect(0,0,matrixTop.clientWidth,matrixTop.clientHeight);
+
+    const netAccel = 1 + clamp(Metrics.perSec/24,0,SETTINGS.matrix.maxAccel-1) + matrixPulse;
+    matrixPulse *= 0.92;
+
+    for(const L of this.layers){
+      const H=L.canvas.clientHeight, ctx=L.ctx, font=L.font, colW=L.colW;
+      ctx.textBaseline='top';
+      for(let i=0;i<L.cols;i++){
+        const s=L.state[i];
+        const x=i*colW+2+Math.sin((s.y*0.05)+time*0.8)*2;
+
+        // faint bar behind the column head
+        ctx.save();
+        ctx.globalCompositeOperation='lighter';
+        ctx.fillStyle='rgba(0,255,230,.003)';
+        ctx.fillRect(x-2, 0, colW-2, Math.min(H, (s.y+1)*font));
+        ctx.restore();
+
+        for(let j=0;j<s.tail;j++){
+          const y=(s.y-j)*font;
+          if(y<-font||y>H+font) continue;
+
+          let glyph;
+          if(L.kind==="hex"){ glyph = GLY_HEX[(s.off+j)%GLY_HEX.length]; }
+          else { const str = s.seq; glyph = str[(s.off+j)%str.length] || ' '; }
+
+          const head = j===0, glow = j<SETTINGS.matrix.glowLead;
+          const alphaBase = head? 0.5 : 0.28*(1-j/s.tail);
+          ctx.shadowBlur = glow? 3 : 0;
+          ctx.shadowColor = glow? 'rgba(0,255,220,.45)' : 'transparent';
+          ctx.fillStyle= `${s.tint}${alphaBase})`;
+          ctx.fillText(glyph, x, y);
+        }
+
+        // motion
+        s.y += s.v * (1 + (Math.random()<SETTINGS.matrix.burstChance?0.35:0)) * netAccel;
+        s.off++;
+        if(s.y*font>H+font){ s.y=-randi(1,6); s.v=rand(L.speed[0],L.speed[1]); s.tail=randi(16,24); s.seq=this.makeSeq(L.kind); s.off=0; }
+      }
+    }
+  }
+};
+function sizeMatrix(){ Matrix.resize(); }
+
+/* ================= RADAR (6-layer) ================= */
+const chainColors = { BTC:'#f7931a', ETH:'#627eea', SOL:'#00ffa3', BNB:'#f3ba2f', TRX:'#ff073a', WBTC:'#f7931a' };
+const rcWrap=$('hexRadar');
+const gridCanvas=$('gridCanvas'), dotsCanvas=$('dotsCanvas'), sweepCanvas=$('sweepCanvas'),
+      ringsCanvas=$('ringsCanvas'), netCanvas=$('netCanvas'), pulseCanvas=$('pulseCanvas');
+const sectorCanvas=$('sectorCanvas'), triCanvas=$('triCanvas'), blipCanvas=$('blipCanvas'),
+      trailCanvas=$('trailCanvas'), heatCanvas=$('heatCanvas'), sparkCanvas=$('sparkCanvas'),
+      polarCanvas=$('polarCanvas'), glowCanvas=$('glowCanvas');
+
+const gtx=gridCanvas.getContext('2d'), dtx=dotsCanvas.getContext('2d'), swtx=sweepCanvas.getContext('2d'),
+      rtx=ringsCanvas.getContext('2d'), ntx=netCanvas.getContext('2d'), ptx=pulseCanvas.getContext('2d'),
+      sctx=sectorCanvas.getContext('2d'), tctx=triCanvas.getContext('2d'), bctx=blipCanvas.getContext('2d'),
+      trctx=trailCanvas.getContext('2d'), hctx=heatCanvas.getContext('2d'), spctx=sparkCanvas.getContext('2d'),
+      pctx=polarCanvas.getContext('2d'), g2ctx=glowCanvas.getContext('2d');
+
+function setSizeRadar(){ const s=(rcWrap.getBoundingClientRect().width|0);
+  [ [gridCanvas,gtx],[dotsCanvas,dtx],[sweepCanvas,swtx],[ringsCanvas,rtx],[netCanvas,ntx],[pulseCanvas,ptx],
+    [sectorCanvas,sctx],[triCanvas,tctx],[blipCanvas,bctx],[trailCanvas,trctx],[heatCanvas,hctx],[sparkCanvas,spctx],
+    [polarCanvas,pctx],[glowCanvas,g2ctx] ].forEach(([c,ctx])=>setCanvasSize(c,ctx,s,s));
+}
+function drawHexGrid(){
+  gtx.clearRect(0,0,gridCanvas.clientWidth,gridCanvas.clientHeight);
+  const size=16, w=Math.sqrt(3)*size, h=2*size, vert=3/4*h;
+  gtx.strokeStyle='rgba(0,255,240,.14)'; gtx.lineWidth=1;
+  for(let y=0;y<gridCanvas.clientHeight+size;y+=vert){
+    for(let x=0;x<gridCanvas.clientWidth+w;x+=w){
+      const off=(Math.floor(y/vert)%2)?w/2:0;
+      gtx.beginPath();
+      for(let i=0;i<6;i++){
+        const a=Math.PI/3*i+Math.PI/6;
+        const px=(x+off)+size*Math.cos(a), py=y+size*Math.sin(a);
+        if(i===0) gtx.moveTo(px,py); else gtx.lineTo(px,py);
+      }
+      gtx.closePath(); gtx.stroke();
+    }
+  }
+}
+function drawPolar(){
+  const cw=polarCanvas.clientWidth, ch=polarCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  pctx.clearRect(0,0,cw,ch); pctx.save(); pctx.translate(cx,cy); pctx.globalAlpha=.08; pctx.strokeStyle='rgba(0,220,255,.35)';
+  for(let i=0;i<24;i++){ pctx.beginPath(); pctx.moveTo(0,0); pctx.lineTo(Math.cos(i*Math.PI/12)*R, Math.sin(i*Math.PI/12)*R); pctx.stroke(); }
+  pctx.restore();
+}
+function drawRings(){
+  const cw=ringsCanvas.clientWidth, ch=ringsCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  rtx.clearRect(0,0,cw,ch);
+  rtx.save(); rtx.translate(cx,cy);
+  const annuli = SETTINGS.assets.map((sym,i)=>({ sym, r: (R*0.32) + i*(R*0.11) }));
+  annuli.forEach(a=>{
+    rtx.globalAlpha=.18; rtx.strokeStyle='rgba(0,255,240,.25)'; rtx.lineWidth=1;
+    rtx.beginPath(); rtx.arc(0,0,a.r,0,Math.PI*2); rtx.stroke();
+    rtx.globalAlpha=.9; rtx.fillStyle=chainColors[a.sym]||'#8af';
+    rtx.font='11px Orbitron, ui-monospace'; rtx.textAlign='center'; rtx.textBaseline='bottom';
+    rtx.fillText(a.sym, 0, -a.r-8);
+  });
+  rtx.restore();
+}
+function drawGlow(){
+  const cw=glowCanvas.clientWidth, ch=glowCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  g2ctx.clearRect(0,0,cw,ch);
+  const g=g2ctx.createRadialGradient(cx,cy,R*0.6,cx,cy,R*0.98);
+  g.addColorStop(0,'rgba(0,255,240,.02)'); g.addColorStop(1,'rgba(0,255,240,.08)');
+  g2ctx.fillStyle=g; g2ctx.beginPath(); g2ctx.arc(cx,cy,R,0,Math.PI*2); g2ctx.fill();
+}
+
+/* dynamic sets */
+let sweepAng=0, pulses=[];
+let nodes=[];
+let clusters=[], blips=[], heatEvents=[], sparks=[];
+function seedNodes(n){ nodes=Array.from({length:n},()=>({x:Math.random()*dotsCanvas.clientWidth,y:Math.random()*dotsCanvas.clientHeight,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6})); }
+function stepNodes(dt){ for(const n of nodes){ n.x+=n.vx*dt*60; n.y+=n.vy*dt*60; if(n.x<0||n.x>dotsCanvas.clientWidth) n.vx*=-1; if(n.y<0||n.y>dotsCanvas.clientHeight) n.vy*=-1; } }
+
+function drawSweep(dt){
+  const cw=sweepCanvas.clientWidth, ch=sweepCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  swtx.clearRect(0,0,cw,ch);
+  const width= Math.PI/16;
+  const start=sweepAng-width/2, end=sweepAng+width/2;
+  const grad=swtx.createRadialGradient(cx,cy,R*0.1,cx,cy,R);
+  grad.addColorStop(0,'rgba(0,255,224,.18)'); grad.addColorStop(1,'rgba(0,255,224,0)');
+  swtx.fillStyle=grad; swtx.beginPath(); swtx.moveTo(cx,cy); swtx.arc(cx,cy,R,start,end); swtx.closePath(); swtx.fill();
+  swtx.save(); swtx.globalCompositeOperation='lighter'; swtx.strokeStyle='rgba(0,255,224,.32)'; swtx.lineWidth=2;
+  swtx.beginPath(); swtx.arc(cx,cy,R,start,end); swtx.stroke(); swtx.restore();
+
+  const accel = SETTINGS.radar.sweepSpeedBase + clamp(Metrics.perSec/30,0,SETTINGS.radar.sweepSpeedScale);
+  sweepAng = (sweepAng + accel*dt) % (Math.PI*2);
+
+  if(Math.abs((sweepAng%(Math.PI/1)))<0.02) pulses.push({t:0});
+}
+function drawPulseRings(dt){
+  const cw=pulseCanvas.clientWidth, ch=pulseCanvas.clientHeight, cx=cw/2, cy=ch/2, maxR=Math.min(cw,ch)*0.46;
+  ptx.clearRect(0,0,cw,ch); ptx.strokeStyle='rgba(20,255,200,.16)'; ptx.lineWidth=2;
+  pulses.forEach(p=>{ p.t+=(dt); const rr = p.t*120; if(rr<maxR){ ptx.beginPath(); ptx.arc(cx,cy,rr,0,Math.PI*2); ptx.stroke(); }});
+  pulses = pulses.filter(p=>p.t*120<maxR);
+}
+let netAng=0;
+function drawNet(dt){
+  const cw=netCanvas.clientWidth, ch=netCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.48;
+  ntx.clearRect(0,0,cw,ch); ntx.save(); ntx.translate(cx,cy); ntx.rotate(netAng);
+  ntx.globalAlpha=.12; ntx.strokeStyle='rgba(50,200,255,.32)';
+  for(let i=0;i<8;i++){ const a=(i/8)*Math.PI*2; ntx.beginPath(); ntx.moveTo(0,0); ntx.lineTo(Math.cos(a)*R, Math.sin(a)*R); ntx.stroke(); }
+  ntx.restore(); netAng += dt*0.25;
+}
+function drawDots(){
+  dtx.clearRect(0,0,dotsCanvas.clientWidth,dotsCanvas.clientHeight);
+  nodes.forEach(n=>{ const g=dtx.createRadialGradient(n.x,n.y,0,n.x,n.y,8); g.addColorStop(0,'rgba(20,255,137,.08)'); g.addColorStop(1,'rgba(20,255,137,0)'); dtx.fillStyle=g; dtx.beginPath(); dtx.arc(n.x,n.y,8,0,Math.PI*2); dtx.fill(); });
+}
+
+/* clusters + blips */
+function initRadarData(){
+  clusters=[]; blips=[]; heatEvents=[];
+  const [cMin,cMax]=SETTINGS.radar.clustersPerAsset;
+  const [bMin,bMax]=SETTINGS.radar.blipsPerCluster;
+  const [rMin,rMax]=SETTINGS.radar.ringBands;
+  SETTINGS.assets.forEach((sym,idx)=>{
+    const n=randi(cMin,cMax+1);
+    for(let i=0;i<n;i++){
+      const a=Math.random()*Math.PI*2;
+      const r=rMin + (idx/SETTINGS.assets.length)*0.6 + rand(-0.04,0.04);
+      const conf=rand(.7,.98);
+      clusters.push({sym,a,r:clamp(r, rMin, rMax),conf});
+      const m=randi(bMin,bMax+1);
+      for(let k=0;k<m;k++){
+        const da=rand(-.06,.06), dr=rand(-.03,.03);
+        blips.push({sym, a:a+da, r:clamp(r+dr, rMin, rMax), w:rand(.1,.4), conf:conf*rand(.9,1)});
+      }
+    }
+  });
+  sparks=Array.from({length:24},()=>({x:Math.random(), y:Math.random(), v:rand(.02,.06)}));
+}
+function drawSectorRings(){
+  const cw=sectorCanvas.clientWidth, ch=sectorCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  sctx.clearRect(0,0,cw,ch); sctx.save(); sctx.translate(cx,cy);
+  sctx.globalAlpha=.08; sctx.strokeStyle='rgba(0,255,240,.22)';
+  for(let i=0;i<12;i++){ sctx.beginPath(); sctx.arc(0,0,R,(i/12)*Math.PI*2,((i+1)/12)*Math.PI*2); sctx.stroke(); }
+  sctx.restore();
+}
+function drawAssetArcs(){
+  const cw=triCanvas.clientWidth, ch=triCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  tctx.clearRect(0,0,cw,ch); tctx.save(); tctx.translate(cx,cy);
+  clusters.forEach(c=>{
+    tctx.globalAlpha=.14; tctx.strokeStyle=(chainColors[c.sym]||'#8af');
+    tctx.lineWidth=2;
+    tctx.beginPath(); tctx.arc(0,0,R*c.r, c.a-0.18, c.a+0.18);
+    tctx.stroke();
+  });
+  tctx.restore();
+}
+function drawBlips(dt){
+  const cw=blipCanvas.clientWidth, ch=blipCanvas.clientHeight, cx=cw/2, cy=ch/2, R=Math.min(cw,ch)*0.46;
+  bctx.clearRect(0,0,cw,ch); bctx.save(); bctx.translate(cx,cy);
+  blips.forEach(b=>{
+    b.a=(b.a+b.w*dt*0.6)%(Math.PI*2);
+    const x=Math.cos(b.a)*R*b.r, y=Math.sin(b.a)*R*b.r;
+    b._x=cx+x; b._y=cy+y;
+
+    const col=chainColors[b.sym]||'#88ccff';
+    const g=bctx.createRadialGradient(x,y,0,x,y,7);
+    g.addColorStop(0, hexToRGBA(col,0.9));
+    g.addColorStop(1, hexToRGBA(col,0));
+    bctx.fillStyle=g;
+    bctx.beginPath(); bctx.arc(x,y,7,0,Math.PI*2); bctx.fill();
+
+    bctx.fillStyle=hexToRGBA(col,0.9); bctx.beginPath(); bctx.arc(x,y,3,0,Math.PI*2); bctx.fill();
+  });
+
+  // top labels (smart)
+  const top = [...blips].sort((a,b)=>b.conf-a.conf).slice(0,SETTINGS.radar.labelTopN);
+  bctx.font='11px Orbitron, ui-monospace'; bctx.textBaseline='middle';
+  top.forEach(b=>{
+    const x=b._x-cx, y=b._y-cy;
+    const label=b.sym;
+    const w=bctx.measureText(label).width+10, h=16;
+    bctx.fillStyle='rgba(0,20,30,.65)';
+    bctx.strokeStyle='rgba(0,255,240,.25)';
+    bctx.lineWidth=1;
+    bctx.beginPath();
+    bctx.roundRect(x+12, y-8, w, h, 8);
+    bctx.fill(); bctx.stroke();
+    bctx.fillStyle='rgba(200,240,255,.95)'; bctx.fillText(label, x+17, y);
+  });
+
+  bctx.restore();
+}
+function drawTrails(){
+  const W=trailCanvas.clientWidth, H=trailCanvas.clientHeight;
+  trctx.clearRect(0,0,W,H); trctx.globalAlpha=.22; trctx.strokeStyle='rgba(0,255,240,.25)'; trctx.lineWidth=1.5;
+  for(let i=0;i<blips.length;i++){
+    const a=blips[i]; let best=null,bd=1e9;
+    for(let j=i+1;j<blips.length;j++){
+      const b=blips[j]; if(b.sym!==a.sym) continue;
+      const dx=a._x-b._x, dy=a._y-b._y; const d=dx*dx+dy*dy;
+      if(d<bd){ bd=d; best=b; }
+    }
+    if(best && Math.sqrt(bd)<160){ trctx.beginPath(); trctx.moveTo(a._x,a._y); trctx.lineTo(best._x,best._y); trctx.stroke(); }
+  }
+}
+function drawHeat(dt){
+  const W=heatCanvas.clientWidth, H=heatCanvas.clientHeight, PI2=Math.PI*2;
+  hctx.clearRect(0,0,W,H);
+
+  // cluster hulls (persistent)
+  hctx.save();
+  clusters.forEach(c=>{
+    const x=W/2 + Math.cos(c.a)*Math.min(W,H)*0.46*c.r;
+    const y=H/2 + Math.sin(c.a)*Math.min(W,H)*0.46*c.r;
+    const col=chainColors[c.sym]||'#8af';
+    const g=hctx.createRadialGradient(x,y,8,x,y,38);
+    g.addColorStop(0, hexToRGBA(col,0.08));
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    hctx.fillStyle=g; hctx.beginPath(); hctx.arc(x,y,36,0,PI2); hctx.fill();
+  });
+  hctx.restore();
+
+  // sweep hits
+  const epsA=SETTINGS.radar.hitEpsilonRad, epsR=SETTINGS.radar.rangeEpsilon;
+  blips.forEach(b=>{
+    let da = Math.abs(((b.a - sweepAng + Math.PI) % PI2) - Math.PI);
+    if(da<epsA){
+      const dr = Math.abs(1 - b.r);
+      if(dr<epsR){
+        const w=(1-da/epsA)*(1-dr/epsR)*b.conf;
+        heatEvents.push({x:b._x,y:b._y,t:0,conf:clamp(w,0,1),sym:b.sym});
+        matrixPulse = Math.min(matrixPulse+0.08, 0.35);
+      }
+    }
+  });
+
+  // render echoes
+  heatEvents.forEach(h=>{
+    h.t+=dt;
+    const baseR=30 + h.t*140;
+    const alpha = clamp(0.55*h.conf - h.t*0.30, 0, 0.55);
+    const col = chainColors[h.sym]||'#8af';
+    hctx.save();
+    hctx.globalAlpha=alpha;
+    const g=hctx.createRadialGradient(h.x,h.y,0,h.x,h.y,baseR);
+    g.addColorStop(0,'rgba(180,240,255,0.9)');
+    g.addColorStop(1,'rgba(180,240,255,0)');
+    hctx.fillStyle=g; hctx.beginPath(); hctx.arc(h.x,h.y,baseR,0,PI2); hctx.fill();
+
+    hctx.globalAlpha=alpha*0.6; hctx.strokeStyle=hexToRGBA(col,0.8); hctx.lineWidth=1.25;
+    for(let i=1;i<=SETTINGS.radar.echoRings;i++){
+      const rr=baseR+i*18; hctx.beginPath(); hctx.arc(h.x,h.y,rr,0,PI2); hctx.stroke();
+    }
+    hctx.restore();
+  });
+  heatEvents = heatEvents.filter(h=>h.t<2.2);
+}
+function drawSparks(dt){
+  const W=sparkCanvas.clientWidth, H=sparkCanvas.clientHeight;
+  spctx.clearRect(0,0,W,H);
+  sparks.forEach(s=>{ s.x=(s.x+dt*s.v)%1; const x=s.x*W, y=s.y*H; spctx.fillStyle='rgba(180,255,250,.45)'; spctx.fillRect(x,y,1.5,1.5); });
+}
+
+/* ================= LINE ================= */
+const line=$('lineCanvas'), lctx2=line.getContext('2d');
+function sizeLine(){ setCanvasSize(line,lctx2,line.clientWidth,line.clientHeight); }
+function drawLineGrid(ctx,w,h,step){ ctx.save(); ctx.globalAlpha=.22; ctx.strokeStyle='rgba(0,170,220,.25)'; for(let x=0;x<w;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); } for(let y=0;y<h;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); } ctx.restore(); }
+const series=Array.from({length:160},(_,i)=>50+Math.sin(i/8)*20+(Math.random()*12-6));
+let hb = { last: performance.now(), interval: 820, spike: 0 };
+function updateHeartbeat(now){
+  if (now - hb.last > hb.interval){
+    hb.last = now;
+    hb.interval = Math.floor(Math.random() * (980 - 620) + 620);
+    hb.spike = Math.random() < 0.92 ? (Math.random() * (65 - 35) + 35) : (Math.random() * (45 - 20) + 20);
+  } else {
+    hb.spike *= 0.82;
+  }
+}
+
+function stepLine(){
+  // Random-spike heartbeat: flat baseline with stochastic sharp spikes (ECG-like)
+  series.shift();
+  const last = series[series.length-1];
+
+  if(!window.__hbRand){
+    window.__hbRand = {
+      queue: [],         // upcoming relative values to add to baseline
+      cooldown: 0,       // frames until next spike allowed
+      base: 50
+    };
+  }
+  const S = window.__hbRand;
+
+  function makeSpike(){
+    const ampR = rand(45, 85);     // R peak
+    const ampQ = -rand(12, 26);    // Q dip
+    const ampS = -rand(14, 34);    // S dip
+    const ampT = rand(8, 22);      // T wave
+    const preFlat = randi(6, 14);
+    const postFlat = randi(10, 22);
+    const riseR = randi(2, 4);
+    const fallR = randi(2, 4);
+
+    const smooth = (arr)=>{
+      for(let i=1;i<arr.length;i++){ arr[i] = arr[i-1]*0.18 + arr[i]*0.82; }
+      return arr;
+    };
+
+    const seg = [];
+    for(let i=0;i<preFlat;i++) seg.push(0);            // baseline
+
+    const ampP = rand(2,6);                            // P
+    for(let i=0;i<randi(3,6);i++) seg.push(ampP * (i/5));
+
+    for(let i=0;i<randi(2,4);i++) seg.push(ampQ);      // Q
+    for(let i=0;i<riseR;i++) seg.push(ampR);           // R
+    for(let i=0;i<fallR;i++) seg.push(ampS);           // S
+
+    const tSamples = randi(10, 18);                    // T
+    for(let i=0;i<tSamples;i++){
+      const ph = i/(tSamples-1);
+      const ease = Math.sin(ph*Math.PI);
+      seg.push(ampT * ease);
+    }
+
+    for(let i=0;i<postFlat;i++) seg.push(0);           // tail
+    return smooth(seg);
+  }
+
+  if(S.cooldown > 0){                                  // trigger logic
+    S.cooldown--;
+  } else if(S.queue.length === 0 && Math.random() < 0.02){
+    S.queue = makeSpike();
+    S.cooldown = randi(40, 120);
+  }
+
+  let rel = 0;
+  if(S.queue.length){ rel = S.queue.shift(); }
+  else { rel = rand(-10, 10); }
+
+  const jitter = rand(-6, 6);
+  const target = S.base + rel + jitter;
+  const next = clamp(target, 0, 100);
+
+  series.push(clamp(last*0.6 + next*0.4, 0, 100));
+}
+
+function drawLine(){
+  sizeLine();
+  const w=line.clientWidth, h=line.clientHeight;
+  lctx2.clearRect(0,0,w,h);
+  drawLineGrid(lctx2,w,h,28);
+
+  // path
+  lctx2.beginPath();
+  for(let i=0;i<series.length;i++){
+    const x=i/(series.length-1)*w;
+    const y=h - (series[i]/100)*h;
+    if(i===0) lctx2.moveTo(x,y); else lctx2.lineTo(x,y);
+  }
+
+  // neon gradient: magenta -> cyan
+  const g=lctx2.createLinearGradient(0,0,w,0);
+g.addColorStop(0,'rgba(0,255,200,0.6)');
+g.addColorStop(0.5,'rgba(0,180,255,0.45)');
+g.addColorStop(1,'rgba(20,255,137,0.9)');
+lctx2.strokeStyle=g;
+  lctx2.lineCap='butt';
+  lctx2.lineJoin='miter';
+
+  // glow
+  lctx2.save();
+  lctx2.lineWidth=3.2;
+  lctx2.shadowBlur=18;
+  lctx2.shadowColor='rgba(0,255,255,0.38)';
+  lctx2.stroke();
+  lctx2.restore();
+
+  // crisp
+  lctx2.lineWidth=2;
+  lctx2.stroke();
+
+  // sharp head
+  (function(){
+    const n = series.length;
+    if(n < 2) return;
+    const x2 = w;
+    const y2 = h - (series[n-1]/100)*h;
+    const x1 = w - (1/(n-1))*w;
+    const y1 = h - (series[n-2]/100)*h;
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx/len, uy = dy/len;
+    const px = -uy, py = ux;
+
+    const tipLen = Math.min(20, w/22);
+    const baseW  = Math.max(3.5, 4.5);
+
+    const tipX = x2 + ux * (tipLen * 0.15);
+    const tipY = y2 + uy * (tipLen * 0.15);
+    const b1x  = x2 - ux * tipLen + px * (baseW*0.6);
+    const b1y  = y2 - uy * tipLen + py * (baseW*0.6);
+    const b2x  = x2 - ux * tipLen - px * (baseW*0.6);
+    const b2y  = y2 - uy * tipLen - py * (baseW*0.6);
+
+    lctx2.save();
+    const head = lctx2.createLinearGradient(x2-20, y2, x2+20, y2);
+head.addColorStop(0,'rgba(0,255,200,0.6)');
+head.addColorStop(1,'rgba(20,255,137,0.9)');
+lctx2.fillStyle = head;
+    lctx2.beginPath();
+    lctx2.moveTo(tipX, tipY);
+    lctx2.lineTo(b1x, b1y);
+    lctx2.lineTo(b2x, b2y);
+    lctx2.closePath();
+    lctx2.shadowBlur=14;
+    lctx2.shadowColor='rgba(0,255,255,0.4)';
+    lctx2.fill();
+    lctx2.restore();
+  })();
+}
+
+/* ================= LOG ================= */
+const scanLog=$('scanLog'); let logCount=0; const logBuffer=[];
+function addLogNode(node){ logBuffer.push(node); }
+function flushLog(){ if(!logBuffer.length) return; const frag=document.createDocumentFragment(); for(let i=0;i<Math.min(50,logBuffer.length);i++) frag.appendChild(logBuffer.shift()), logCount++; scanLog.prepend(frag); while(logCount>SETTINGS.log.maxDom){ scanLog.removeChild(scanLog.lastChild); logCount--; } }
+function chainBadgeEl(chain){ const wrap=document.createElement('span'); wrap.className='badge'; wrap.dataset.chain=chain; wrap.innerHTML=({BTC:`<svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f7931a"/><path d="M13.4 12.6c1.1-.3 1.8-1.1 1.7-2.3-.1-1.3-1.1-2-2.6-2.2V6.3h-1.4v1.7H9.8V6.3H8.4v1.7H7v1.4h1.4v5.1H7v1.4h1.4v1.7h1.4v-1.7h1.3v1.7h1.4v-1.9c1.8-.1 3-1.1 2.9-2.7-.1-1.1-.7-1.8-1.9-2.1Zm-3.1-2.3h1.6c.8  0 1.3.3 1.3 1s-.5 1-1.3 1h-1.6v-2Zm1.6 5h-1.6v-2h1.7c.9 0 1.4.4 1.4 1s-.5 1-1.5 1Z" fill="#fff"/></svg>BTC`,ETH:`<svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2l7 10-7 4-7-4 7-10z" fill="#627eea"/><path d="M12 22l7-10-7 4-7-4 7 10z" fill="#627eea"/></svg>ETH`,SOL:`<svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 16h12l-3 3H3l3-3zM6 5h12l-3 3H3l3-3zM6 10.5h12l-3 3H3l3-3z" fill="#00ffa3"/></svg>SOL`,BNB:`<svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2l3 3-3 3-3-3 3-3zm0 6l3 3-3 3-3-3 3-3zm0 6l3 3-3 3-3-3 3-3z" fill="#f3ba2f"/></svg>BNB`,TRX:`<svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 3l18 4-8 14L3 3z" fill="#ff073a"/></svg>TRX`})[chain]||chain; return wrap; }
+const WALLET_BRANDS=["MetaMask","Trust Wallet","Coinbase Wallet","Phantom","Solflare","OKX Wallet","Binance Web3 Wallet","Bybit Wallet","Bitget Wallet","1inch Wallet","Ledger Live","Trezor Suite","Safe (Gnosis)","Rainbow","Zerion","Argent","Exodus","TronLink","Klever"];
+const BRAND_WEIGHTS=new Map(Object.entries({"MetaMask":14,"Trust Wallet":12,"Coinbase Wallet":10,"Phantom":9,"Solflare":7,"OKX Wallet":7,"Binance Web3 Wallet":7,"Bybit Wallet":5,"Bitget Wallet":5,"1inch Wallet":5,"Ledger Live":6,"Trezor Suite":5,"Safe (Gnosis)":6,"Rainbow":4,"Zerion":4,"Argent":4,"Exodus":4,"TronLink":6,"Klever":4}));
+function pickBrand(){ const weights=WALLET_BRANDS.map(b=>BRAND_WEIGHTS.get(b)||1); const sum=weights.reduce((a,b)=>a+b,0); let r=Math.random()*sum; for(let i=0;i<WALLET_BRANDS.length;i++){ r-=weights[i]; if(r<=0) return WALLET_BRANDS[i]; } return WALLET_BRANDS[0]; }
+
+/* ================= STATUS REFS ================= */
+const hashrate=$('hashrate'), blockHeight=$('blockHeight'), walletsEl=$('wallets'), walletIntegrity=$('walletIntegrity');
+const mempool=$('mempool'), gas=$('gas'); const latency=$('latency'), throughput=$('throughput'), invalidTx=$('invalidTx');
+const ring=$('ringProgress'), ringValue=$('ringValue'); const consensusBar=$('consensusBar'), consensusValue=$('consensusValue'), txBar=$('txBar'), txLoad=$('txLoad'), congBar=$('congBar'), netCong=$('netCong');
+const scanTimerEl=$('scanTimer');
+
+/* ================= CORE + Worker Fallback ================= */
+let currentHeight=845924, feas=18;
+const Core={ running:false, elapsedMs:0, walletsTotal:0 };
+let worker=null, workerOk=false;
+
+const Metrics = { emaPerSec:0, lastTotal:0, lastTs:performance.now(),
+  step(now){ if(!Core.running) return; const dt=(now-this.lastTs)/1000; if(dt<0.5) return;
+    const scanned=Core.walletsTotal-this.lastTotal; const inst=scanned/Math.max(0.001,dt);
+    this.emaPerSec=this.emaPerSec*0.85+inst*0.15; this.lastTotal=Core.walletsTotal; this.lastTs=now; },
+  get perSec(){return this.emaPerSec}, get perHour(){return this.emaPerSec*3600}
+};
+
+const Fallback={ enabled:false, hourStart:0, hourTarget:0, hourProgress:0, frac:0, last:performance.now(),
+  start(){ this.enabled=true; this.last=performance.now(); },
+  stop(){ this.enabled=false; },
+  step(now){
+    if(!this.enabled) return;
+    if(!this.hourStart || (now - this.hourStart)>=3600000 || this.hourProgress>=this.hourTarget){
+      this.hourStart=now; this.hourTarget=randi(SETTINGS.scan.hourlyMin, SETTINGS.scan.hourlyMax+1); this.hourProgress=0; this.frac=0;
+    }
+    const remain=Math.max(1,3600 - (now-this.hourStart)/1000);
+    let rate=(this.hourTarget-this.hourProgress)/remain;
+    rate*= (1+(Math.random()*2 - 1)*SETTINGS.scan.jitter);
+    const dt=(now-this.last)/1000; this.last=now;
+    this.frac+= rate*dt;
+    const add=this.frac|0;
+    if(add>0){ this.frac-=add; this.hourProgress+=add; Core.walletsTotal+=add; }
+    Core.elapsedMs+=dt*1000;
+    walletsEl.textContent=formatCount(Core.walletsTotal);
+    fitTextId(walletsEl);
+  }
+};
+function makeWorker(){
+  try{
+    const code=`
+      let s={run:false,total:0,elapsed:0,hStart:0,hTarget:0,hProg:0,frac:0,last:Date.now()};
+      function rand(a,b){return Math.random()*(b-a)+a} function randi(a,b){return Math.floor(rand(a,b))}
+      const LIM={lo:${SETTINGS.scan.hourlyMin},hi:${SETTINGS.scan.hourlyMax},jit:${SETTINGS.scan.jitter}};
+      function ensure(now){ if(!s.hStart||(now-s.hStart)>=3600000||s.hProg>=s.hTarget){ s.hStart=now; s.hTarget=randi(LIM.lo,LIM.hi+1); s.hProg=0; s.frac=0; } }
+      function loop(){ const now=Date.now(); const dt=(now-s.last)/1000; s.last=now;
+        if(s.run){ ensure(now); let remain=Math.max(1,3600 - (now-s.hStart)/1000); let rate=(s.hTarget-s.hProg)/remain; rate*= (1+(Math.random()*2-1)*LIM.jit);
+          s.frac+= rate*dt; const add=s.frac|0; if(add>0){ s.frac-=add; s.hProg+=add; s.total+=add; } s.elapsed+=dt*1000; if(now%250<50){ postMessage({t:'S',total:s.total,elapsed:s.elapsed}); } }
+        setTimeout(loop,50);
+      }
+      onmessage=e=>{const d=e.data; if(d.t==='START'){s.run=true;s.last=Date.now()} else if(d.t==='STOP'){s.run=false}
+        else if(d.t==='SYNC'){ s.total=d.total|0; s.elapsed=d.elapsed|0; s.run=false; s.last=Date.now(); }};
+      loop();
+    `;
+    const blob=new Blob([code],{type:'application/javascript'});
+    const w=new Worker(URL.createObjectURL(blob)); workerOk=true; return w;
+  }catch(e){ workerOk=false; return null; }
+}
+
+/* ================= WHALE / MEV ================= */
+const whaleList=$('whaleList'), whActive=$('whActive'), whHigh=$('whHigh'), whAttempts=$('whAttempts');
+const vectors=['Approval drain','Multi-sig gap','Dust linkage','Vanity prefix','Bridge pivot','Oracle bias']; let breachAttempts=0;
+function randomWalletUSD(chain){ const ranges={BTC:[5e6,80e6], WBTC:[3e6,40e6], ETH:[1e6,25e6], BNB:[5e5,8e6], SOL:[2e5,5e6], TRX:[1e5,3e6], DEFAULT:[3e5,6e6]}; const [lo,hi]=ranges[chain]||ranges.DEFAULT; const mu=Math.log(Math.sqrt(lo*hi)); const sigma=Math.log(hi/lo)/4; let x=Math.exp(mu + sigma*(Math.random()*2-1)); x=Math.min(Math.max(x,lo),hi); return Math.round(x); }
+function formatMoneyCompact(v){ if(v>=1e9) return (v/1e9).toFixed(1)+'B'; if(v>=1e6) return (v/1e6).toFixed(1)+'M'; if(v>=1e3) return (v/1e3).toFixed(1)+'k'; return '$'+v.toFixed(0); }
+function newTarget(){ const {chain,gen}=pickChain(); const addr=maskMid(gen()); const usd=randomWalletUSD(chain); const bal=formatMoneyCompact(usd); const vec=vectors[randi(0,vectors.length)]; const like=Math.floor(rand(28,82)); const speed=rand(.6,1.1); const seedLen=Math.random()<0.68?12:24; const seedFound=randi(0,Math.floor(seedLen*0.3)); const brand=pickBrand(); return {chain,addr,usd,bal,vec,like,prog:rand(0,22),speed,seedLen,seedFound,brand,dom:null}; }
+let targets=[];
+function renderTarget(t){ const row=document.createElement('div'); row.className='hud-panel p-3 w-item'; const left=chainBadgeEl(t.chain);
+  const mid=document.createElement('div'); mid.innerHTML=`<div class="flex items-center gap-2"><span class="text-cyan-50 kbd">${t.addr}</span><span class="brand-chip">${t.brand}</span><span class="pill">${t.vec}</span><span class="pill">$ ${t.bal}</span></div><div class="w-stage mt-2"><div style="transform:scaleX(${clamp(t.prog/100,0,1)})"></div></div><div class="seed-info"><span class="text-[10px] text-cyan-200/70">Seed slots</span><div class="slot-row">${Array.from({length:Math.min(24,t.seedLen)},(_,i)=>`<span class="slot-dot ${i<t.seedFound?'on':''}"></span>`).join('')}</div><span class="text-[11px] text-cyan-100/80 font-bold">${t.seedFound}/${t.seedLen}</span></div>`;
+  const right=document.createElement('div'); right.className='micro'; right.style.background=`conic-gradient(var(--c2) ${t.like*3.6}deg, rgba(0,255,240,.15) 0)`; right.innerHTML=`<span>${t.like}%</span>`;
+  row.appendChild(left); row.appendChild(mid); row.appendChild(right); whaleList.appendChild(row);
+  t.dom={row,stage:mid.querySelector('.w-stage>div'),ring:right,likeEl:right.querySelector('span'),slots:Array.from(mid.querySelectorAll('.slot-dot')),seedLabel:mid.querySelector('.seed-info .font-bold')}; }
+function updateTargetDom(t){ t.dom.stage.style.transform=`scaleX(${clamp(t.prog/100,0,1)})`; t.dom.ring.style.background=`conic-gradient(var(--c2) ${t.like*3.6}deg, rgba(0,255,240,.15) 0)`; t.dom.likeEl.textContent=t.like.toFixed(0)+'%'; t.dom.slots.forEach((el,i)=>el.classList.toggle('on', i < t.seedFound)); t.dom.seedLabel.textContent=`${t.seedFound}/${t.seedLen}`; }
+function seedTargets(n=8){ whaleList.innerHTML=''; targets=Array.from({length:n},()=>newTarget()); targets.forEach(renderTarget); whActive.textContent=String(targets.length); whHigh.textContent=String(targets.filter(x=>x.like>=70).length); }
+
+/* MEV canvas */
+const mev = $('mevCanvas'), mctx2 = mev.getContext('2d');
+function sizeMev(){ setCanvasSize(mev, mctx2, mev.clientWidth, mev.clientHeight); }
+
+const assets = [...SETTINGS.assets];
+const lanes  = assets.map(() => ({ v: rand(.15, .75), blocker: rand(.2, .8) }));
+
+const mevRate = $('mevRate'), mevWin = $('mevWin'), mevVal = $('mevVal');
+let shimmerPhase = 0;
+
+function drawMev(){
+  const c = mev, ctx = mctx2; shimmerPhase = (shimmerPhase + 0.02) % 1;
+  ctx.clearRect(0, 0, c.clientWidth, c.clientHeight);
+
+  // grid
+  ctx.save(); ctx.globalAlpha = .22; ctx.strokeStyle = 'rgba(0,170,220,.22)';
+  const step = 28;
+  for (let x = 0; x < c.clientWidth; x += step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,c.clientHeight); ctx.stroke(); }
+  for (let y = 0; y < c.clientHeight; y += step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(c.clientWidth,y); ctx.stroke(); }
+  ctx.restore();
+
+  // lanes
+  const pad = 70, gap = 22;
+  const h = (c.clientHeight - 48 - gap * (lanes.length - 1)) / lanes.length;
+  const w = c.clientWidth - pad - 20;
+
+  ctx.font = '14px Orbitron, monospace';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(210,245,255,.95)';
+
+  lanes.forEach((l, i) => {
+    const y = 24 + i * (h + gap);
+
+    // label
+    ctx.fillText(assets[i], 18, y + h/2);
+
+    // track
+    ctx.fillStyle = 'rgba(0,148,180,.28)';
+    ctx.fillRect(pad, y, w, h);
+
+    // progress
+    const g = ctx.createLinearGradient(pad, y, pad + w, y);
+    g.addColorStop(0,  'rgba(0,255,240,.25)');
+    g.addColorStop(.5, 'rgba(40,210,255,.65)');
+    g.addColorStop(.95,'rgba(80,200,255,.95)');
+    ctx.fillStyle = g;
+    ctx.fillRect(pad, y, w * l.v, h);
+
+    // head shimmer
+    const headX = pad + w * l.v, shw = 18;
+    const grad = ctx.createLinearGradient(headX - shw, y, headX + shw, y);
+    grad.addColorStop(0,  'rgba(255,255,255,0)');
+    grad.addColorStop(.5, 'rgba(180,255,250,.55)');
+    grad.addColorStop(1,  'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(headX - shw, y, shw * 2, h);
+
+    // blocker
+    ctx.globalAlpha = .45;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.fillRect(pad + w * l.blocker - 6, y, 6, h);
+    ctx.globalAlpha = 1;
+  });
+}
+
+const MEV_DESC = {
+  FRONTRUN:  "Mempool intercept — pre-trade entry ⚡",
+  BACKRUN:   "Riding whale TX — slippage capture 🌊",
+  ARBITRAGE: "Cross-DEX mispricing — instant profit 🔀"
+};
+
+function addMevEvent(type, asset, gainStr){
+  const row = document.createElement('div');
+  row.className = `mev-row ${type==='FRONTRUN'?'type-frontrun':(type==='BACKRUN'?'type-backrun':'type-arb')}`;
+  row.innerHTML = `<div class="asset">${asset}</div><div class="tactic">${type}</div><div class="gain">+${gainStr}%</div><div class="desc">${MEV_DESC[type]}</div>`;
+  $('mevList').prepend(row);
+  while ($('mevList').childElementCount > 12) $('mevList').removeChild($('mevList').lastChild);
+}
+
+/* ================= CONNECTIVITY WATCHDOG ================= */
+const NET = { online: true, autoPaused: false, resumeOnBack: false, timer: null };
+
+function setNetAlert(show){
+  const el = $('netAlert');
+  if(!el) return;
+  el.classList.toggle('hidden', !show);
+  el.setAttribute('aria-hidden', String(!show));
+}
+
+async function pingOnline(timeout=3000){
+  // If the browser itself reports offline, return false immediately
+  if (!navigator.onLine) return false;
+
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+
+  try {
+    // Lightweight ping to the API; 401 also means the server is reachable
+    const res = await fetch(`${API_BASE}/me`, {
+      method: 'GET',
+      headers: token ? { Authorization: "Bearer " + token } : {},
+      cache: 'no-store',
+      signal: ctrl.signal
+    });
+    clearTimeout(t);
+    return res.ok || res.status === 401;
+  } catch (e) {
+    clearTimeout(t);
+    return false;
+  }
+}
+
+async function connectivityWatchdog(){
+  const ok = await pingOnline();
+
+  if (ok) {
+    if (!NET.online) {
+      NET.online = true;
+      setNetAlert(false);
+      showToast('Connection restored');
+      if (NET.autoPaused && NET.resumeOnBack) {
+        NET.autoPaused = false;
+        setRunning(true);
+      }
+    }
+  } else {
+    if (NET.online) {
+      NET.online = false;
+      setNetAlert(true);
+      showToast('Internet connection is lost. Please check your connection.');
+      NET.resumeOnBack = RUNNING; // If we were scanning, resume after reconnect
+      if (RUNNING) { NET.autoPaused = true; /* keep server scan running; UI will freeze */ }
+    }
+  }
+}
+
+function startConnectivityWatchdog(){
+  if (NET.timer) clearInterval(NET.timer);
+  NET.timer = setInterval(connectivityWatchdog, 5000); // Every 5 seconds
+  window.addEventListener('online', connectivityWatchdog);
+  window.addEventListener('offline', connectivityWatchdog);
+  connectivityWatchdog(); // Initial check
+}
+  
+/* ================= CONTROLS ================= */
+let RUNNING=false; 
+const btnStart=$('btnStart'), btnStop=$('btnStop');
+btnStart.onclick=()=>setRunning(true); 
+btnStop.onclick=()=>setRunning(false);
+function setRunning(s){
+  if (s === RUNNING) return;
+  if (s && !NET.online) { setNetAlert(true); showToast('Internet connection is lost. Please check your connection.'); return; }
+  (async () => {
+    try{
+      if (s){
+        await apiPOST('/scan/start');
+        RUNNING = true; Core.running = true;
+        document.getElementById('appMain').classList.remove('idle');
+        showToast('Scan started (server)');
+        startStatusPolling();
+      } else {
+        await apiPOST('/scan/stop');
+        RUNNING = false; Core.running = false;
+        showToast('Scan paused');
+      }
+      btnStart.classList.toggle('opacity-50', s);
+      btnStart.classList.toggle('pointer-events-none', s);
+      btnStart.setAttribute('aria-pressed', String(s));
+      btnStop.classList.toggle('opacity-50', !s);
+      btnStop.classList.toggle('pointer-events-none', !s);
+      btnStop.setAttribute('aria-pressed', String(!s));
+    }catch(e){ showToast('Server error'); }
+  })();
+}
+  if(s===RUNNING) return;
+  RUNNING=s; 
+  Core.running=s;
+
+  btnStart.classList.toggle('opacity-50',s); 
+  btnStart.classList.toggle('pointer-events-none',s); 
+  btnStart.setAttribute('aria-pressed', String(s));
+
+  btnStop.classList.toggle('opacity-50',!s); 
+  btnStop.classList.toggle('pointer-events-none',!s); 
+  btnStop.setAttribute('aria-pressed', String(!s));
+
+  const appMain=document.getElementById('appMain');
+
+  if(s){
+    appMain.classList.remove('idle'); // show live
+    showToast('Scan started');
+    if(targets.length===0) seedTargets(8);
+    if(workerOk){ worker && worker.postMessage({t:'START'}); } 
+    else { Fallback.start(); }
+  } else {
+    showToast('Scan stopped — view frozen'); // freeze
+    if(workerOk){ worker && worker.postMessage({t:'STOP'}); } 
+    else { Fallback.stop(); }
+    Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal});
+  }
+}
+
+
+/* ================= MASTER LOOP ================= */
+let last=performance.now(); let tScan=0,tTx=0,tLine=0,tStatus=0,tDisc=0,tWhale=0,tMev=0,tRadar=0; let elapsedMs=0; let nextMatrixTime=0;
+function formatHMS(ms){ const total=Math.floor(ms/1000); const h=String(Math.floor(total/3600)).padStart(2,'0'); const m=String(Math.floor((total%3600)/60)).padStart(2,'0'); const s=String(total%60).padStart(2,'0'); return `${h}:${m}:${s}`; }
+
+function loop(now){
+  const dt=(now-last)/1000; last=now;
+
+  if(RUNNING){
+    // Matrix synced
+    if(now>=nextMatrixTime){ Matrix.update(dt, now); nextMatrixTime=now+1000/30; }
+
+    // Radar
+    tRadar+=dt; if(tRadar>=1/60){
+      stepNodes(tRadar); drawDots(); drawSweep(tRadar); drawPulseRings(tRadar); drawNet(tRadar);
+      drawSectorRings(); drawAssetArcs(); drawBlips(tRadar); drawTrails(); drawHeat(tRadar); drawSparks(tRadar); drawPolar(); drawRings(); drawGlow();
+      tRadar=0;
+    }
+
+    tScan+=dt; tTx+=dt; tLine+=dt; tStatus+=dt; tDisc+=dt; tWhale+=dt; tMev+=dt; elapsedMs += dt*1000;
+
+    Fallback.step(now);
+    Metrics.step(now);
+
+    if(tScan>=1){ scanTimerEl.textContent=formatHMS(elapsedMs); fitTextId(scanTimerEl); tScan=0; }
+
+    // LOG generator
+    while(tTx>=SETTINGS.log.tickMs/1000){ tTx-=SETTINGS.log.tickMs/1000;
+      const brand=pickBrand(); const {chain, gen}=pickChain(); const addr=maskMid(gen());
+      const verbs=['rpc','nonce-scan','signature','keystore','transport','session'];
+      const outcomes=['ok','delayed','queued','rate-limit','retry'];
+      const v=verbs[randi(0,verbs.length)], o=outcomes[randi(0,outcomes.length)];
+      const token=hex(6).toUpperCase();
+      const row=document.createElement('div'); row.className='flex items-center gap-2'; row.appendChild(chainBadgeEl(chain));
+      const span=document.createElement('span'); span.textContent=`${brand} • ${chain} • ${v}=${o} • id:${token} • ${addr}`; row.appendChild(span); addLogNode(row);
+    }
+    flushLog();
+
+    // Wave
+    if(tLine>=0.08){ stepLine(); drawLine(); tLine=0; }
+
+    // KPIs
+    if (tStatus >= 0.75) {
+      tStatus = 0;
+      const wh = Metrics.perHour||0, wps = Metrics.perSec||0;
+
+      const load = clamp(35 + wh/1200 + rand(-8,8), 25, 92);
+      const cong = clamp(22 + load*0.55 + rand(-5,5), 15, 95);
+      const consPct = clamp(62 + (80 - cong)*0.3 + rand(-4,6), 55, 95);
+
+      consensusBar.style.width = consPct.toFixed(0)+'%';
+      consensusValue.textContent = consPct>85?'Strong':(consPct>70?'Stable':'Weak');
+      txBar.style.width = load.toFixed(0)+'%'; txLoad.textContent = load.toFixed(0)+'%';
+      congBar.style.width = cong.toFixed(0)+'%'; netCong.textContent = cong.toFixed(0)+'%';
+
+      hashrate.textContent = `${(540 + wh/600 + rand(-30,60)).toFixed(0)} MH/s`;
+      mempool.textContent  = `TX ${Math.round(700 + wh/70 + randi(-80,120))}`;
+      gas.textContent      = `Gwei ${randi(18,48)}`;
+      walletIntegrity.textContent = (98.3 + Math.random()*1.4).toFixed(1)+'%';
+
+      const lat = clamp(42 - wps*0.9 + rand(-3,3), 18, 45);
+      latency.textContent = `${lat.toFixed(0)} ms`;
+      const thr = clamp(3.2 + wh/18000 + rand(-0.2,0.4), 2.5, 7.2);
+      throughput.textContent = `${thr.toFixed(1)} Gb/s`;
+      invalidTx.textContent = (0.08 + Math.random()*0.18).toFixed(2)+'%';
+
+      blockHeight.textContent = '#'+(++currentHeight).toLocaleString('en-US');
+
+      feas = clamp(10 + cong*0.55 + rand(-10,6), 8, 92);
+      const C=2*Math.PI*50; ring.style.strokeDashoffset=(C*(1-feas/100)).toFixed(1);
+      ringValue.textContent = `${feas.toFixed(0)}%`;
+
+      FIT_IDS.forEach(id=>fitTextId($(id)));
+    }
+
+    if(tDisc>=3){ tDisc=0; for(let i=0;i<3;i++){ const {chain,gen}=pickChain(); const addr=maskMid(gen());
+      const row=document.createElement('div'); row.className='flex items-center gap-2'; row.appendChild(chainBadgeEl(chain));
+      const note=document.createElement('span'); note.textContent=`DISCOVERY • wallet ${addr} • ${chain} • heuristics match`; row.appendChild(note); addLogNode(row);
+    } }
+
+    if(tWhale>=0.25){ tWhale=0; let high=0;
+      for(const t of targets){
+        const wps = Metrics.perSec || 0; const push = clamp(wps*0.8, 0.3, 10);
+        t.prog=Math.min(100, t.prog + t.speed*rand(1.2,3.2) + push*rand(0.2,0.8));
+        if (Math.random() < 0.45) t.seedFound = Math.min(t.seedLen, t.seedFound + (Math.random()<0.65?1:2));
+        t.like=clamp(t.like + (Math.random()-.5)*3 + (t.prog>70?rand(0.2,1.2):-rand(0.2,1.0)),8,98);
+        if(t.like>=70) high++; updateTargetDom(t);
+        if(t.prog>=100 || t.seedFound>=t.seedLen){ whAttempts.textContent=String(++breachAttempts);
+          t.dom.row.remove(); const nt=newTarget(); renderTarget(nt); targets.splice(targets.indexOf(t),1,nt);
+        }
+      }
+      whHigh.textContent=String(high);
+      fitTextId(whActive); fitTextId(whHigh); fitTextId(whAttempts);
+    }
+
+    if (tMev >= 0.5) {
+      tMev = 0;
+      const wps = Metrics.perSec || 0;
+      const opp = clamp(0.35 + wps / 12, 0.4, 2.2);
+      const win = clamp(55 + (opp - 0.8) * 12 + rand(-4, 4), 48, 78);
+      const extractedInc = opp * (win / 100) * rand(0.015, 0.06);
+
+      // advance MEV lanes visually so the module 'runs'
+      lanes.forEach(l=>{
+        const step = clamp(0.01 + opp*0.02 + rand(0.002, 0.01), 0.006, 0.05);
+        l.v += step;
+        if (l.v >= 1) { l.v = 0; l.blocker = rand(.2, .8); }
+      });
+
+      $('mevRate').textContent = opp.toFixed(1) + '/s';
+      $('mevWin').textContent  = win.toFixed(0) + '%';
+      const prevM = parseFloat(($('mevVal').textContent || '0').replace(/[^\d.]/g,'')) || 0;
+      $('mevVal').textContent  = (prevM + extractedInc).toFixed(1) + 'M';
+
+      const kinds=['FRONTRUN','BACKRUN','ARBITRAGE'];
+      const typ=kinds[randi(0,kinds.length)]; const a=SETTINGS.assets[randi(0,SETTINGS.assets.length)];
+      const gain=(0.12 + opp*0.08 + rand(-0.05,0.05)) * 100; addMevEvent(typ,a,gain.toFixed(2));
+      drawMev();
+
+      fitTextId(mevRate); fitTextId(mevWin); fitTextId(mevVal);
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+/* ================= BOOT ================= */
+function init(){
+  setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow();
+  seedNodes(36); initRadarData(); drawSectorRings(); drawAssetArcs(); drawBlips(0.016); drawTrails(); drawHeat(0.016); drawSparks(0.016);
+
+  sizeMatrix();
+  drawLine(); sizeMev(); drawMev();
+
+  requestAnimationFrame(t=>{ last=t; loop(t); });
+
+  ['hashrate','blockHeight','walletIntegrity','mempool','gas','latency','throughput','invalidTx'].forEach(id=>$(id).textContent='—');
+  $('wallets').textContent='—'; $('scanTimer').textContent='00:00:00';
+  showToast('Ready');
+
+  const saved=Persist.load()||{}; Core.elapsedMs=saved.elapsed||0; Core.walletsTotal=saved.total||0; if(Core.walletsTotal) { walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); }
+
+  worker=makeWorker();
+  if(worker){ worker.onmessage=(e)=>{ const d=e.data; if(d.t==='S'){ Core.walletsTotal=d.total|0; Core.elapsedMs=d.elapsed|0; walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); } }; worker.postMessage({t:'SYNC',total:Core.walletsTotal,elapsed:Core.elapsedMs}); }
+
+  addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
+  addEventListener('beforeunload',()=>{ Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal}); });
+   // Initial server sync
+  try{
+    const { scan } = await apiGET('/scan/status');
+    Core.elapsedMs = scan?.elapsed_ms || 0;
+    Core.walletsTotal = scan?.total_scanned || 0;
+    walletsEl.textContent = formatCount(Core.walletsTotal);
+    scanTimerEl.textContent = formatHMS(Core.elapsedMs);
+    if (scan?.status === 'running'){
+      RUNNING = true; Core.running = true;
+      document.getElementById('appMain').classList.remove('idle');
+      btnStart.classList.add('opacity-50','pointer-events-none');
+      btnStop.classList.remove('opacity-50','pointer-events-none');
+    } else {
+      RUNNING = false; Core.running = false;
+    }
+    startStatusPolling();
+  }catch(e){}
+  startConnectivityWatchdog();
+}
+init();
+</script>
+<script src="../assets/wallets.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Profile — Dolphin Wallet Finder</title>
+
+  <style>
+  :root{
+    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+    --grid:#0e1628;
+    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
+    --muted:rgba(190,245,255,.85); --text:#eafaff;
+    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+      linear-gradient(180deg,#0a1220,var(--grid) 42%);
+    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+  }
+
+  .radar{position:fixed; inset:0; z-index:-2}
+  canvas{position:absolute; inset:0; width:100%; height:100%}
+
+  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
+  .shell{
+    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+  }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+
+  .brand-pane{
+    position:relative;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+    backdrop-filter: blur(18px) saturate(120%);
+    border-right:1px solid rgba(64,203,255,.18);
+    overflow:hidden;
+  }
+  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; gap:20px; justify-content:space-between }
+  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); margin-inline:auto; }
+  .ring{ position:absolute; inset:-12%; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+  }
+  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; text-align:center; }
+  .kicker{ color:var(--muted); line-height:1.8; text-align:center }
+
+  .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; }
+  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+
+  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+
+  .stats{ display:flex; gap:14px; flex-wrap:wrap; margin-top:6px }
+  .stat{ background:linear-gradient(120deg,rgba(0,255,255,.09),rgba(0,35,80,.14)); border:1px solid rgba(64,203,255,.28); border-radius:14px; padding:12px 16px; min-width:160px }
+  .stat .n{ font-size:1.3rem; font-weight:900; color:var(--c1) }
+  .stat .l{ color:var(--muted); font-size:.95rem }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:14px; align-items:center }
+  .card.col{ flex-direction:column; align-items:stretch }
+  .card h3{ margin:0 0 6px; font-size:1.05rem; letter-spacing:.2px; color:var(--muted) }
+
+  .table{
+    width:100%; border-collapse:separate; border-spacing:0 10px; margin-top:4px;
+  }
+  .row{
+    display:grid; grid-template-columns:220px 1fr; gap:10px;
+    background:linear-gradient(120deg,rgba(0,255,255,.07),rgba(0,30,90,.10));
+    border:1px solid rgba(64,203,255,.28); border-radius:12px; padding:12px 14px;
+  }
+  .cell-label{ color:var(--muted); font-weight:700 }
+  .cell-value{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
+
+  .actions{ margin-top:8px; display:flex; flex-wrap:wrap; gap:10px; }
+  .btn, .btn-ghost{
+    border:none; border-radius:14px; padding:12px 18px; font-weight:900; letter-spacing:.3px; cursor:pointer;
+  }
+  .btn{
+    color:#001019; background:linear-gradient(95deg,var(--c2),var(--c1),var(--c3),var(--c2)); background-size:220% 100%;
+    box-shadow:0 16px 40px rgba(53,167,255,.28); text-transform:uppercase;
+    transition:transform .15s ease, background-position .55s ease, opacity .2s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); background-position:100% 0 }
+  .btn:disabled{ opacity:.45; cursor:not-allowed }
+  .btn-ghost{ background:transparent; border:1px solid var(--stroke); color:var(--text) }
+
+  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+
+  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+  @keyframes spin{ to{ transform:rotate(360deg) } }
+
+  @media (max-width: 600px){
+    .logo-wrap{ width:min(180px,60vw); margin:0 auto; }
+  }
+
+@media (max-width: 600px){
+  .brand-inner{ padding:20px; }
+  .pane-inner{ padding:20px; }
+
+  .row{
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 12px;
+  }
+  .cell-label{ font-size: .9rem; }
+  .cell-value{
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .stat{
+    min-width: auto;
+    flex: 1 1 45%;
+  }
+
+  .actions{ flex-direction: column; }
+  .btn, .btn-ghost{ width: 100%; }
+
+  .logo-wrap{ width:min(160px,58vw); }
+}
+
+@media (max-width: 360px){
+  .pane-inner{ padding:16px; }
+}
+
+</style>
+</head>
+<body>
+
+  <div class="radar" aria-hidden="true">
+    <canvas id="bg"></canvas>
+  </div>
+
+  <main class="stage">
+    <section class="shell">
+      <!-- Brand / Left -->
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div class="logo-wrap">
+            <span class="ring"></span>
+            <img src="../assets/logo.png" alt="Dolphin Wallet Finder Logo" />
+          </div>
+
+          <div>
+            <div class="title">Dolphin Wallet Finder</div>
+            <p class="kicker">Manage your wallet, license, and actions in one place.</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content / Right -->
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+          <header class="hero">
+            <h2>👤 My Profile</h2>
+            <p>Your account overview and license status. Data refreshes automatically.</p>
+          </header>
+
+          <!-- Quick stats -->
+          <div class="stats" id="quickStats">
+            <div class="stat"><div class="n" id="statUser">—</div><div class="l">Username</div></div>
+            <div class="stat"><div class="n" id="statNetwork">—</div><div class="l">Network</div></div>
+            <div class="stat"><div class="n" id="statBalance">—</div><div class="l">Balance</div></div>
+            <div class="stat"><div class="n" id="statLicense">—</div><div class="l">License</div></div>
+          </div>
+
+          <section class="grid">
+            <!-- Profile details -->
+            <div class="card col">
+              <h3>Account & Wallet</h3>
+              <div class="table">
+                <div class="row">
+                  <div class="cell-label">Username</div>
+                  <div class="cell-value" id="username">Loading…</div>
+                </div>
+                <div class="row">
+                  <div class="cell-label">Wallet Address</div>
+                  <div class="cell-value" id="walletAddress">Loading…</div>
+                </div>
+                <div class="row">
+                  <div class="cell-label">Balance</div>
+                  <div class="cell-value" id="walletBalance">Loading…</div>
+                </div>
+                <div class="row">
+                  <div class="cell-label">Network</div>
+                  <div class="cell-value" id="walletNetwork">Loading…</div>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button class="btn-ghost" id="refreshBtn">Refresh</button>
+                <button class="btn-ghost" id="logoutBtn">Log out</button>
+              </div>
+              <div class="helper" id="profileMsg"></div>
+            </div>
+
+            <!-- License block -->
+            <div class="card col">
+              <h3>License</h3>
+              <div class="table">
+                <div class="row">
+                  <div class="cell-label">Status</div>
+                  <div class="cell-value" id="licenseStatus">Checking…</div>
+                </div>
+                <div class="row">
+                  <div class="cell-label">Transaction Hash (TXID)</div>
+                  <div class="cell-value" id="licenseTx">—</div>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button class="btn" id="withdrawBtn" disabled>Withdraw Assets</button>
+                <button class="btn-ghost" id="activateBtn">Activate / Renew</button>
+              </div>
+              <div class="helper" id="licenseMsg"></div>
+            </div>
+          </section>
+        </div>
+          <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // ===== Config =====
+    const API_BASE_URL = "https://web-production-b86d.up.railway.app/api";
+
+    // ===== Auth gate =====
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in first.");
+      window.location.href = "login.html";
+    }
+
+    // ===== Elements =====
+    const els = {
+      statUser: document.getElementById("statUser"),
+      statNetwork: document.getElementById("statNetwork"),
+      statBalance: document.getElementById("statBalance"),
+      statLicense: document.getElementById("statLicense"),
+
+      username: document.getElementById("username"),
+      walletAddress: document.getElementById("walletAddress"),
+      walletBalance: document.getElementById("walletBalance"),
+      walletNetwork: document.getElementById("walletNetwork"),
+      profileMsg: document.getElementById("profileMsg"),
+
+      licenseStatus: document.getElementById("licenseStatus"),
+      licenseTx: document.getElementById("licenseTx"),
+      licenseMsg: document.getElementById("licenseMsg"),
+
+      withdrawBtn: document.getElementById("withdrawBtn"),
+      activateBtn: document.getElementById("activateBtn"),
+      copyWallet: document.getElementById("copyWallet"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      logoutBtn: document.getElementById("logoutBtn"),
+      goDashboard: document.getElementById("goDashboard"),
+    };
+
+    // ===== UI helpers =====
+    function maskAddress(addr){
+      if(!addr || addr.length < 12) return addr || "N/A";
+      return addr.slice(0,6) + "••••••••" + addr.slice(-4);
+    }
+    function setStat(el, val){ el.textContent = val ?? "—"; }
+
+    // ===== Data loaders =====
+    async function loadProfile(){
+      els.profileMsg.textContent = "Loading wallet…";
+      try{
+        const res = await fetch(`${API_BASE_URL}/my-wallet`, {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        const data = await res.json();
+
+        const username = localStorage.getItem("username") || "Unknown";
+        setStat(els.statUser, username);
+        els.username.textContent = username;
+
+        if(data && data.wallet){
+          const w = data.wallet;
+          els.walletAddress.textContent = maskAddress(w.address);
+          els.walletBalance.textContent = w.balance ?? "N/A";
+          els.walletNetwork.textContent = w.network ?? "N/A";
+
+          setStat(els.statBalance, w.balance ?? "N/A");
+          setStat(els.statNetwork, w.network ?? "N/A");
+
+          if (els.copyWallet && w.address){
+          els.copyWallet.onclick = () => {
+            if(!w.address){ return; }
+            navigator.clipboard.writeText(w.address).then(()=>{
+              els.profileMsg.textContent = "Wallet address copied.";
+              setTimeout(()=> els.profileMsg.textContent = "", 1200);
+            });
+          };
+          }
+        }else{
+          els.walletAddress.textContent = "N/A";
+          els.walletBalance.textContent = "N/A";
+          els.walletNetwork.textContent = "N/A";
+        }
+        els.profileMsg.textContent = "";
+      }catch(e){
+        els.profileMsg.textContent = "";
+      }
+    }
+
+    async function loadLicense(){
+      els.licenseMsg.textContent = "Checking license…";
+      try{
+        const res = await fetch(`${API_BASE_URL}/license/status`, {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        const data = await res.json();
+
+        if(data && data.tx_hash){
+          els.licenseTx.textContent = data.tx_hash;
+        } else {
+          els.licenseTx.textContent = "N/A";
+        }
+
+        if(data && data.license === "active"){
+          els.licenseStatus.textContent = "✅ Approved";
+          setStat(els.statLicense, "Active");
+          els.withdrawBtn.disabled = false;
+          els.withdrawBtn.onclick = () => window.location.href = "transaction.html";
+          els.licenseMsg.textContent = "";
+        } else if (data && data.license === "pending"){
+          els.licenseStatus.textContent = "⏳ Waiting for approval";
+          setStat(els.statLicense, "Pending");
+          els.withdrawBtn.disabled = true;
+          els.licenseMsg.textContent = "Admin approval required to withdraw.";
+        } else {
+          els.licenseStatus.textContent = "❌ License Pending";
+          setStat(els.statLicense, "Pending");
+          els.withdrawBtn.disabled = true;
+          els.licenseMsg.textContent = "⏳ Waiting for approval";
+        }
+      }catch(e){
+        els.licenseStatus.textContent = "❌ Error checking status";
+        els.licenseTx.textContent = "N/A";
+        els.withdrawBtn.disabled = true;
+        els.licenseMsg.textContent = "An error occurred while loading license data.";
+      }
+    }
+
+    // ===== Actions =====
+    els.refreshBtn.onclick = () => { loadProfile(); loadLicense(); };
+    els.logoutBtn.onclick = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      window.location.href = "login.html";
+    };
+    els.activateBtn.onclick = () => window.location.href = "license.html";
+
+    // ===== Init: load immediately + poll =====
+    loadProfile();
+    loadLicense();
+    setInterval(loadLicense, 7000);
+
+    // ===== Decorative radar background =====
+    const c = document.getElementById('bg');
+    if (c && c.getContext) {
+      const ctx = c.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      function resize(){ c.width = innerWidth*dpr; c.height = innerHeight*dpr; }
+      resize(); addEventListener('resize', resize);
+      let t=0;
+      (function loop(){
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.globalAlpha = 0.08;
+        for(let i=0;i<24;i++){
+          const r = (Math.min(c.width,c.height)/3) * (i/24);
+          ctx.beginPath();
+          ctx.arc(c.width/2, c.height/2, r + Math.sin(t/25+i)*8*dpr, 0, Math.PI*2);
+          ctx.strokeStyle = `rgba(64,203,255,0.35)`;
+          ctx.lineWidth = 1*dpr;
+          ctx.setLineDash([8*dpr, 10*dpr]);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        t++; requestAnimationFrame(loop);
+      })();
+    }
+  </script>
+</body>
+</html>

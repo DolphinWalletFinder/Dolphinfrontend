@@ -1,0 +1,208 @@
+/* --- Gold palette mapping --- */
+.theme-gold{
+  --grid:#5c441a;
+  --panel:rgba(28,22,10,.72);
+  --panel2:rgba(16,12,6,.6);
+  --c1:#f6c25a;       /* accent primary */
+  --c2:#ffd479;       /* accent secondary */
+  --c3:#ffefc3;       /* glow */
+  --ink:#fff6de;
+}
+
+/* --- Platinum palette mapping --- */
+.theme-platinum{
+  --grid:#23303f;
+  --panel:rgba(12,18,28,.72);
+  --panel2:rgba(8,14,22,.6);
+  --c1:#dbe8ff;
+  --c2:#9fc7ff;
+  --c3:#cfe0ff;
+  --ink:#eef6ff;
+}
+
+/* Background polish per theme */
+.theme-gold body, .theme-platinum body { color: var(--ink); }
+.theme-gold .grid-bg{ opacity:.24 }
+.theme-platinum .grid-bg{ opacity:.22 }
+
+.theme-gold .scanline{
+  background:linear-gradient(180deg,transparent, rgba(255,245,200,.18), transparent);
+}
+.theme-platinum .scanline{
+  background:linear-gradient(180deg,transparent, rgba(200,230,255,.16), transparent);
+}
+
+/* Panels, borders, hover shine */
+.theme-gold .hud-panel{
+  border-color: color-mix(in oklab, var(--c1) 45%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(246,194,90,.08), 0 14px 44px -22px rgba(0,0,0,.85);
+}
+.theme-platinum .hud-panel{
+  border-color: color-mix(in oklab, var(--c2) 45%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(160,200,255,.08), 0 14px 44px -22px rgba(0,0,0,.85);
+}
+.theme-gold .hud-panel::after,
+.theme-platinum .hud-panel::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.05),transparent);
+  animation:vipShine 4s linear infinite;
+}
+@keyframes vipShine{0%{transform:translateX(-40%)}100%{transform:translateX(40%)}}
+
+/* Buttons */
+.theme-gold .btn{
+  border-color: color-mix(in oklab, var(--c1) 60%, transparent);
+  background:linear-gradient(135deg,#1e1405,#0c0905);
+  color:#fff6de;
+  box-shadow:0 0 0 1px rgba(246,194,90,.15) inset;
+}
+.theme-platinum .btn{
+  border-color: color-mix(in oklab, var(--c2) 60%, transparent);
+  background:linear-gradient(135deg,#0d1420,#060a12);
+  color:#eef6ff;
+  box-shadow:0 0 0 1px rgba(160,200,255,.15) inset;
+}
+.theme-gold .btn:hover,
+.theme-platinum .btn:hover{ transform: translateY(-1px); }
+
+/* Titles */
+.theme-gold .title{
+  background:linear-gradient(90deg,#fff4ce,var(--c1));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:0 0 16px color-mix(in oklab, var(--c1) 30%, transparent);
+}
+.theme-platinum .title{
+  background:linear-gradient(90deg,#f5fbff,var(--c2));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:0 0 16px color-mix(in oklab, var(--c2) 30%, transparent);
+}
+
+/* Bars & KPIs */
+.theme-gold .bar{ background: color-mix(in oklab, var(--c1) 15%, #000 85% / .35) }
+.theme-gold .bar>div{ background:linear-gradient(90deg,var(--c2),var(--c1)) }
+.theme-platinum .bar{ background: color-mix(in oklab, var(--c2) 15%, #000 85% / .35) }
+.theme-platinum .bar>div{ background:linear-gradient(90deg,var(--c2),var(--c3)) }
+
+.theme-gold .metric-value{ color:#fce9b2; text-shadow:0 0 12px rgba(246,194,90,.18) }
+.theme-platinum .metric-value{ color:#dbe8ff; text-shadow:0 0 12px rgba(160,200,255,.18) }
+
+/* Pills & badges */
+.theme-gold .pill, .theme-gold .badge{
+  border-color: color-mix(in oklab, var(--c1) 35%, transparent);
+  background: rgba(40,28,10,.35);
+  color: color-mix(in oklab, var(--c1) 85%, white);
+}
+.theme-platinum .pill, .theme-platinum .badge{
+  border-color: color-mix(in oklab, var(--c2) 35%, transparent);
+  background: rgba(12,22,36,.35);
+  color: color-mix(in oklab, var(--c2) 85%, white);
+}
+
+/* Whale & MEV rows tint */
+.theme-gold .mev-row{ box-shadow: inset 0 0 0 1px rgba(246,194,90,.05), 0 0 0 1px rgba(246,194,90,.06) }
+.theme-platinum .mev-row{ box-shadow: inset 0 0 0 1px rgba(160,200,255,.05), 0 0 0 1px rgba(160,200,255,.06) }
+
+/* Micro like-rings */
+.theme-gold .micro{ box-shadow: inset 0 0 0 6px rgba(246,194,90,.12) }
+.theme-platinum .micro{ box-shadow: inset 0 0 0 6px rgba(160,200,255,.12) }
+
+/* Control bar & toast */
+.theme-gold .control-bar{ border-color: color-mix(in oklab, var(--c1) 35%, transparent) }
+.theme-platinum .control-bar{ border-color: color-mix(in oklab, var(--c2) 35%, transparent) }
+.theme-gold .toast{ border-color: color-mix(in oklab, var(--c1) 40%, transparent) }
+.theme-platinum .toast{ border-color: color-mix(in oklab, var(--c2) 40%, transparent) }
+
+/* Seed slot dots */
+.theme-gold .slot-dot.on{
+  background:linear-gradient(180deg,var(--c2),var(--c1));
+  box-shadow:0 0 8px color-mix(in oklab, var(--c1) 55%, transparent)
+}
+.theme-platinum .slot-dot.on{
+  background:linear-gradient(180deg,var(--c2),var(--c3));
+  box-shadow:0 0 8px color-mix(in oklab, var(--c2) 55%, transparent)
+}
+
+/* Subtle animated title sheen */
+.theme-gold .title, .theme-platinum .title{
+  background-size:200% 100%;
+  animation:vipTitleFlow 8s ease infinite
+}
+@keyframes vipTitleFlow{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+
+/* ===== User Chip in Header ===== */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: .4rem .8rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: .9rem;
+  color: #e5faff;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px) saturate(160%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .05),
+    0 6px 18px -6px rgba(0, 0, 0, .6);
+
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.user-chip:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .05),
+    0 10px 28px -8px rgba(0, 0, 0, .7);
+}
+
+.user-chip svg {
+  width: 18px;
+  height: 18px;
+  opacity: .85;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,.15));
+}
+
+.user-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+/* Gold */
+.theme-gold .user-chip {
+  border-color: rgba(246, 194, 90, .45);
+  color: #fce9b2;
+  background: rgba(246, 194, 90, .1);
+}
+.theme-gold .user-chip svg {
+  color: #f6c25a;
+}
+
+/* Platinum */
+.theme-platinum .user-chip {
+  border-color: rgba(159, 199, 255, .45);
+  color: #dbe8ff;
+  background: rgba(159, 199, 255, .1);
+}
+.theme-platinum .user-chip svg {
+  color: #9fc7ff;
+}
+.eq-safe{ position:relative; width:100%; min-height:160px }
+#eqCanvas{ display:block; width:100%; height:100% }
+
+/* Equalizer zone */
+.eq-safe{
+  position:absolute;
+  left:12px; right:12px; top:48px;
+  bottom:150px;
+  pointer-events:none;
+  border-radius:12px;
+  overflow:hidden;
+}
+.eq-safe canvas{ position:absolute; inset:0; }
+

