@@ -1254,10 +1254,10 @@ function setRunning(s){
       if (s){
         
 // Generate endAt between 72–120 hours and send once
-const minHours = 72;
-const maxHours = 120;
-const delayHours = Math.floor(Math.random() * (maxHours - minHours + 1)) + minHours;
-const endAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
+const minMinutes = 1;
+const maxMinutes = 5;
+const delayMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
+const endAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 
 await apiPOST('/scan/start', { endAt });
         RUNNING = true; Core.running = true;
