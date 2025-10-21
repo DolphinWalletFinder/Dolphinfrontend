@@ -413,15 +413,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', () => {
   saveScanSnapshot();
 });
-
-
-
-}
-});
-
-event.returnValue = "Are you sure you want to leave this page?";
-});
-
 /* ================= SETTINGS ================= */
 const SETTINGS = {
   assets: ['BTC','ETH','SOL','BNB','TRX'],
