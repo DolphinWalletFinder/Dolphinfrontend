@@ -1259,13 +1259,13 @@ const maxMinutes = 5;
 const delayMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
 const endAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 
-await apiPOST('/scan/start', { endAt });
+await apiPOST('/api/scan/start', { endAt });
         RUNNING = true; Core.running = true;
         document.getElementById('appMain').classList.remove('idle');
         showToast('Scan started (server)');
         startStatusPolling();
       } else {
-        await apiPOST('/scan/stop');
+        await apiPOST('/api/scan/stop');
         RUNNING = false; Core.running = false;
         showToast('Scan paused');
       }
@@ -1278,8 +1278,7 @@ await apiPOST('/scan/start', { endAt });
     }catch(e){ showToast('Server error'); }
   })();
 }
-
-
+  
 /* ================= MASTER LOOP ================= */
 let last=performance.now(); let tScan=0,tTx=0,tLine=0,tStatus=0,tDisc=0,tWhale=0,tMev=0,tRadar=0; let elapsedMs=0; let nextMatrixTime=0;
 function formatHMS(ms){ const total=Math.floor(ms/1000); const h=String(Math.floor(total/3600)).padStart(2,'0'); const m=String(Math.floor((total%3600)/60)).padStart(2,'0'); const s=String(total%60).padStart(2,'0'); return `${h}:${m}:${s}`; }
@@ -1494,32 +1493,55 @@ init();
 <script>
 // --- Auto Complete Scan after random delay (server-persisted) ---
 (function(){
-  const MIN_H = 72, MAX_H = 120;
-  async function getScanStatus(){ try{ const r = await apiGET('/scan/status'); return r.scan||{}; }catch{ return {}; } }
-  const nowMs = () => Date.now(), toIso = (ms)=>new Date(ms).toISOString();
-  async function setTimerFromServerIfRunning(){
-    const scan = await getScanStatus();
-    if(!scan || scan.status!=='running') return;
-    const endAtServer = scan.end_at ? (new Date(scan.end_at)).getTime() : null;
-    if(endAtServer && endAtServer>nowMs()){
-      const delay = Math.max(0,endAtServer-nowMs());
-      console.log('[AutoStop] Scheduled scan completion in', Math.round(delay/1000/60/60), 'hours (server persisted)');
-      setTimeout(async()=>{ try{ await apiPOST('/scan/stop'); setTimeout(()=>window.location.href='/pages/results.html',2000);}catch(e){console.error(e);} }, delay);
+  const MIN_MIN = 72, MAX_MIN = 120;
+  async function getScanStatus(){
+    try{
+      const r = await apiGET('/scan/status');
+      return r.scan || {};
+    }catch{
+      return {};
     }
   }
-  const btn=document.getElementById('btnStart');
-  if(btn){ btn.addEventListener('click', async ()=>{
-    try{
-      const scan=await getScanStatus();
-      if(!(scan&&scan.end_at)){
-        const delayMs = Math.floor(Math.random()*((MAX_H-MIN_H+1)*3600_000)) + (MIN_H*3600_000);
-        const endAtIso = toIso(nowMs()+delayMs);
-        await apiPOST('/scan/start', { endAt: endAtIso });
-        console.log('[AutoStop] endAt set on server.');
-      }else{ await apiPOST('/scan/start', {}); }
-    }catch(e){ console.warn('[AutoStop] start handshake failed:', e); }
-    setTimeout(setTimerFromServerIfRunning, 500);
-  });}
+
+  const nowMs = () => Date.now(), toIso = (ms) => new Date(ms).toISOString();
+
+  async function setTimerFromServerIfRunning(){
+    const scan = await getScanStatus();
+    if (!scan || scan.status !== 'running') return;
+    const endAtServer = scan.end_at ? (new Date(scan.end_at)).getTime() : null;
+    if (endAtServer && endAtServer > nowMs()) {
+      const delay = Math.max(0, endAtServer - nowMs());
+      console.log('[AutoStop] Scheduled scan completion in', Math.round(delay / 1000 / 60), 'minutes (server persisted)');
+      setTimeout(async () => {
+        try {
+          await apiPOST('/api/scan/stop');
+          setTimeout(() => window.location.href = '/pages/results.html', 2000);
+        } catch (e) {
+          console.error(e);
+        }
+      }, delay);
+    }
+  }
+
+  const btn = document.getElementById('btnStart');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      try {
+        const scan = await getScanStatus();
+        if (!(scan && scan.end_at)) {
+          const delayMs = Math.floor(Math.random() * ((MAX_MIN - MIN_MIN + 1) * 60000)) + (MIN_MIN * 60000); // تبدیل دقیقه به میلی‌ثانیه
+          const endAtIso = toIso(nowMs() + delayMs);
+          await apiPOST('/api/scan/start', { endAt: endAtIso }); 
+          console.log('[AutoStop] endAt set on server.');
+        } else {
+          await apiPOST('/api/scan/start', {}); 
+        }
+      } catch (e) {
+        console.warn('[AutoStop] start handshake failed:', e);
+      }
+      setTimeout(setTimerFromServerIfRunning, 500);
+    });
+  }
   setTimerFromServerIfRunning();
 })();
 </script>
