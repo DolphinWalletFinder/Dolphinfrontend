@@ -1253,12 +1253,12 @@ function setRunning(s){
     try{
       if (s){
         
-// Generate endAt between 3-5 days
-// Generate endAt between 3–5 days and start in one call
-const minDays = 3;
-const maxDays = 5;
-const delayDays = Math.random() * (maxDays - minDays) + minDays;
-const endAt = new Date(Date.now() + delayDays * 24 * 60 * 60 * 1000).toISOString();
+// Generate endAt between 72–120 hours and send once
+const minHours = 72;
+const maxHours = 120;
+const delayHours = Math.floor(Math.random() * (maxHours - minHours + 1)) + minHours;
+const endAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
+
 await apiPOST('/scan/start', { endAt });
         RUNNING = true; Core.running = true;
         document.getElementById('appMain').classList.remove('idle');
@@ -1491,6 +1491,7 @@ init();
   }
 })();
 </script>
+<script>
 // --- Auto Complete Scan after random delay (server-persisted) ---
 (function(){
   const MIN_H = 72, MAX_H = 120;
@@ -1521,7 +1522,6 @@ init();
   });}
   setTimerFromServerIfRunning();
 })();
-
 </script>
 <script>
 (function () {
@@ -1580,7 +1580,6 @@ init();
   }
   requestAnimationFrame(loop);
 })();
-</script>
 </script>
 </body>
 </html>
