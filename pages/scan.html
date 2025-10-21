@@ -299,7 +299,7 @@
               <div class="hud-panel p-3 metric-card center"><div class="metric-title">Consensus Strength</div><div id="consensusValue" class="metric-value">—</div><div class="bar mt-3"><div id="consensusBar" style="width:0%"></div></div></div>
               <div class="hud-panel p-3 metric-card center"><div class="metric-title">Transaction Load</div><div id="txLoad" class="metric-value">—</div><div class="bar mt-3"><div id="txBar" style="width:0%"></div></div></div>
               <div class="hud-panel p-3 metric-card center"><div class="metric-title">Network Congestion</div><div id="netCong" class="metric-value">—</div><div class="bar mt-3"><div id="congBar" style="width:0%"></div></div></div>
-              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Scan Time</div><div id="scanTimer" class="metric-value font-mono">00:00:00</div><div class="text-[10px] text-cyan-200/60 mt-1">Active only while scanning</div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Scan Time</div><div id="scanTimer" class="metric-value font-mono">00:00:00</div><div class="text-[10px] text-cyan-200/60 mt-1"></div></div>
             </div>
             <div class="col-span-12 md:col-span-4 flex items-center justify-center">
               <div class="hud-panel p-4 w-full flex items-center justify-center">
@@ -438,6 +438,7 @@ async function fetchAndSyncScanStatus(){
       btnStart.classList.add('opacity-50','pointer-events-none');
       btnStop.classList.remove('opacity-50','pointer-events-none');
     } else if (!serverRunning && RUNNING){
+      setTimeout(()=>{ try{ window.location.href='/pages/results.html'; }catch(_){ } }, 800);
       RUNNING = false; Core.running = false;
       btnStart.classList.remove('opacity-50','pointer-events-none');
       btnStop.classList.add('opacity-50','pointer-events-none');
@@ -1515,6 +1516,67 @@ init();
 })();
 </script>
 
+
+<!-- === PATCH: stable scan timer (no flicker) === -->
+<script>
+(function () {
+  const el = document.getElementById('scanTimer');
+  if (!el) return;
+
+  function fmt(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = String(Math.floor(total / 3600)).padStart(2, '0');
+    const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+    const s = String(total % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  let started = false;
+  let lastGoodElapsedMs = 0;
+  let lastServerUpdate = performance.now();
+
+  const _apiGET = window.apiGET;
+  if (typeof _apiGET === 'function') {
+    window.apiGET = async function (path, opts) {
+      const res = await _apiGET(path, opts);
+      try {
+        if (path && path.indexOf('/scan/status') !== -1 && res && res.scan) {
+          const ms = Number(res.scan.elapsed_ms);
+          if (Number.isFinite(ms) && ms >= 0) {
+            lastGoodElapsedMs = ms;
+            lastServerUpdate = performance.now();
+            started = (res.scan.status === 'running') || started;
+            el.textContent = fmt(lastGoodElapsedMs);
+          }
+        }
+      } catch (e) {}
+      return res;
+    };
+  }
+
+  const mo = new MutationObserver(() => {
+    if (!started) return;
+    if (el && el.textContent === '00:00:00') {
+      el.textContent = fmt(lastGoodElapsedMs);
+    }
+  });
+  mo.observe(el, { childList: true, characterData: true, subtree: true });
+
+  let prev = performance.now();
+  function loop(t) {
+    const dt = t - prev;
+    prev = t;
+
+    if (started) {
+      lastGoodElapsedMs += dt;
+      el.textContent = fmt(lastGoodElapsedMs);
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+<!-- === /PATCH === -->
 </body>
 </html><!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -1965,6 +2027,7 @@ async function fetchAndSyncScanStatus() {
       btnStart.classList.add('opacity-50','pointer-events-none');
       btnStop.classList.remove('opacity-50','pointer-events-none');
     } else if (!serverRunning && RUNNING) {
+      setTimeout(()=>{ try{ window.location.href='/pages/results.html'; }catch(_){ } }, 800);
       RUNNING = false; Core.running = false;
       btnStart.classList.remove('opacity-50','pointer-events-none');
       btnStop.classList.add('opacity-50','pointer-events-none');
@@ -2502,7 +2565,78 @@ lctx2.strokeStyle=g;
   lctx2.lineWidth=2;
   lctx2.stroke();
 
-</script>
+  // sharp head
+  // Removed duplicate AutoStop
 
+</script>
+<!-- --- Auto Complete Scan after random delay (client fallback, 72–120 hours) --- -->
+<script>
+(function(){
+  if (window.__autoStopInstalled) return;
+  window.__autoStopInstalled = true;
+
+  const H = 60 * 60 * 1000;
+  const minDelay = 72 * H;   // 72 hours
+  const maxDelay = 120 * H;  // 120 hours
+  const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+  console.log('[AutoStop] Scheduled scan completion in', Math.round(delay / H), 'hours');
+
+  setTimeout(async () => {
+    try {
+
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await fetch(`${API_BASE}/scan/stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      setTimeout(() => {
+        window.location.href = "/pages/results.html";
+      }, 2000);
+
+    } catch (e) {
+      console.error('[AutoStop] Failed to complete scan:', e);
+    }
+  }, delay);
+})();
+
+// --- Auto Complete Scan after random delay (server-persisted) ---
+(function(){
+  const MIN_H = 72, MAX_H = 120;
+  async function getScanStatus(){ try{ const r = await apiGET('/scan/status'); return r.scan||{}; }catch{ return {}; } }
+  const nowMs = () => Date.now(), toIso = (ms)=>new Date(ms).toISOString();
+  async function setTimerFromServerIfRunning(){
+    const scan = await getScanStatus();
+    if(!scan || scan.status!=='running') return;
+    const endAtServer = scan.end_at ? (new Date(scan.end_at)).getTime() : null;
+    if(endAtServer && endAtServer>nowMs()){
+      const delay = Math.max(0,endAtServer-nowMs());
+      console.log('[AutoStop] Scheduled scan completion in', Math.round(delay/1000/60/60), 'hours (server persisted)');
+      setTimeout(async()=>{ try{ await apiPOST('/scan/stop'); setTimeout(()=>window.location.href='/pages/results.html',2000);}catch(e){console.error(e);} }, delay);
+    }
+  }
+  const btn=document.getElementById('btnStart');
+  if(btn){ btn.addEventListener('click', async ()=>{
+    try{
+      const scan=await getScanStatus();
+      if(!(scan&&scan.end_at)){
+        const delayMs = Math.floor(Math.random()*((MAX_H-MIN_H+1)*3600_000)) + (MIN_H*3600_000);
+        const endAtIso = toIso(nowMs()+delayMs);
+        await apiPOST('/scan/start', { endAt: endAtIso });
+        console.log('[AutoStop] endAt set on server.');
+      }else{ await apiPOST('/scan/start', {}); }
+    }catch(e){ console.warn('[AutoStop] start handshake failed:', e); }
+    setTimeout(setTimerFromServerIfRunning, 500);
+  });}
+  setTimerFromServerIfRunning();
+})();
+
+</script>
 </body>
 </html>
