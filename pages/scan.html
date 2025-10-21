@@ -1939,28 +1939,39 @@ function stopStatusPolling(){
   if(statusTimer) clearInterval(statusTimer);
   statusTimer = null;
 }
-async function fetchAndSyncScanStatus(){
-  try{
+async function fetchAndSyncScanStatus() {
+  try {
     const { scan } = await apiGET('/scan/status');
-    Core.elapsedMs = scan?.elapsed_ms || 0;
-    Core.walletsTotal = scan?.total_scanned || 0;
-    walletsEl.textContent = formatCount(Core.walletsTotal);
+    const serverElapsed = scan?.elapsed_ms;
+    const serverRunning = scan?.status === 'running';
+
+    if (typeof serverElapsed === 'number' && serverElapsed > 0) {
+      Core.elapsedMs = serverElapsed;
+    }
+
+    if (serverRunning && RUNNING) {
+      Core.elapsedMs += 1000;
+    }
+
+    walletsEl.textContent = formatCount(scan?.total_scanned || Core.walletsTotal || 0);
     fitTextId(walletsEl);
     scanTimerEl.textContent = formatHMS(Core.elapsedMs);
     fitTextId(scanTimerEl);
 
-    const serverRunning = scan?.status === 'running';
-    if (serverRunning && !RUNNING){
+    // Sync
+    if (serverRunning && !RUNNING) {
       RUNNING = true; Core.running = true;
       document.getElementById('appMain').classList.remove('idle');
       btnStart.classList.add('opacity-50','pointer-events-none');
       btnStop.classList.remove('opacity-50','pointer-events-none');
-    } else if (!serverRunning && RUNNING){
+    } else if (!serverRunning && RUNNING) {
       RUNNING = false; Core.running = false;
       btnStart.classList.remove('opacity-50','pointer-events-none');
       btnStop.classList.add('opacity-50','pointer-events-none');
     }
-  }catch(e){ /* swallow to be resilient */ }
+  } catch (e) {
+    console.error('[StatusPoll] Error syncing scan:', e);
+  }
 }
 
 
