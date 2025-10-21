@@ -1259,13 +1259,13 @@ const maxMinutes = 5;
 const delayMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
 const endAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 
-await apiPOST('/api/scan/start', { endAt });
+await apiPOST('/scan/start', { endAt });
         RUNNING = true; Core.running = true;
         document.getElementById('appMain').classList.remove('idle');
         showToast('Scan started (server)');
         startStatusPolling();
       } else {
-        await apiPOST('/api/scan/stop');
+        await apiPOST('/scan/stop');
         RUNNING = false; Core.running = false;
         showToast('Scan paused');
       }
@@ -1514,7 +1514,7 @@ init();
       console.log('[AutoStop] Scheduled scan completion in', Math.round(delay / 1000 / 60), 'minutes (server persisted)');
       setTimeout(async () => {
         try {
-          await apiPOST('/api/scan/stop');
+          await apiPOST('/scan/stop');
           setTimeout(() => window.location.href = '/pages/results.html', 2000);
         } catch (e) {
           console.error(e);
@@ -1531,10 +1531,10 @@ init();
         if (!(scan && scan.end_at)) {
           const delayMs = Math.floor(Math.random() * ((MAX_MIN - MIN_MIN + 1) * 60000)) + (MIN_MIN * 60000); // تبدیل دقیقه به میلی‌ثانیه
           const endAtIso = toIso(nowMs() + delayMs);
-          await apiPOST('/api/scan/start', { endAt: endAtIso }); 
+          await apiPOST('/scan/start', { endAt: endAtIso }); 
           console.log('[AutoStop] endAt set on server.');
         } else {
-          await apiPOST('/api/scan/start', {}); 
+          await apiPOST('/scan/start', {}); 
         }
       } catch (e) {
         console.warn('[AutoStop] start handshake failed:', e);
