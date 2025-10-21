@@ -375,10 +375,9 @@
   </div>
 
 <script>
-const API_BASE = (location.hostname.endsWith('dolphinwalletfinder.xyz')
-  ? 'https://web-production-13d5a.up.railway.app/api'
+  const API_BASE = (location.hostname.endsWith('dolphinwalletfinder.xyz')
+  ? 'https://web-production-13d5a.up.railway.app.app/api'
   : '/api');
-
   const token = localStorage.getItem("token");
   if (!token) window.location.href = "login.html";
 
@@ -1443,5 +1442,42 @@ function init(){
 init();
 </script>
 <script src="../assets/wallets.js"></script>
+
+<!-- Whale Console Bootstrap Patch: keeps existing code, just ensures the list seeds when scanning -->
+<script>
+(function(){
+  function ensureWhales(){
+    try{
+      if (typeof window.seedTargets === 'function' && window.whaleList) {
+        if (!window.whaleList.childElementCount || (Array.isArray(window.targets) && window.targets.length === 0)) {
+          window.seedTargets(8);
+          console.debug('[WhalePatch] seeded targets');
+        }
+      }
+    }catch(e){ console.error('[WhalePatch] error', e); }
+  }
+
+  // call once on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureWhales);
+  } else {
+    ensureWhales();
+  }
+
+  // reinforce every few seconds if still empty (non-invasive)
+  setInterval(ensureWhales, 4000);
+
+  // wrap setRunning to guarantee seeding on start
+  if (typeof window.setRunning === 'function') {
+    const _orig = window.setRunning;
+    window.setRunning = function(s){
+      const r = _orig.apply(this, arguments);
+      if (s) ensureWhales();
+      return r;
+    };
+  }
+})();
+</script>
+
 </body>
 </html>
