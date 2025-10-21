@@ -1254,12 +1254,12 @@ function setRunning(s){
       if (s){
         
 // Generate endAt between 3-5 days
+// Generate endAt between 3–5 days and start in one call
 const minDays = 3;
 const maxDays = 5;
 const delayDays = Math.random() * (maxDays - minDays) + minDays;
 const endAt = new Date(Date.now() + delayDays * 24 * 60 * 60 * 1000).toISOString();
-await apiPOST('/scan/set-end', { endAt });
-await apiPOST('/scan/start');
+await apiPOST('/scan/start', { endAt });
         RUNNING = true; Core.running = true;
         document.getElementById('appMain').classList.remove('idle');
         showToast('Scan started (server)');
@@ -1306,7 +1306,7 @@ function loop(now){
     if (tScan >= 1) {
   tScan = 0;
   // Timer now shows server-provided elapsed time only
-  scanTimerEl.textContent = formatHMS(Core.elapsedMsFromServer || 0);
+  scanTimerEl.textContent = formatHMS(Core.elapsedMs || 0);
   fitTextId(scanTimerEl);
 }
 
@@ -1491,44 +1491,6 @@ init();
   }
 })();
 </script>
-</script>
-<!-- --- Auto Complete Scan after random delay (client fallback, 72–120 hours) --- -->
-<script>
-(function(){
-  if (window.__autoStopInstalled) return;
-  window.__autoStopInstalled = true;
-
-  const H = 60 * 60 * 1000;
-  const minDelay = 72 * H;   // 72 hours
-  const maxDelay = 120 * H;  // 120 hours
-  const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
-
-  console.log('[AutoStop] Scheduled scan completion in', Math.round(delay / H), 'hours');
-
-  setTimeout(async () => {
-    try {
-
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      await fetch(`${API_BASE}/scan/stop`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        }
-      });
-
-      setTimeout(() => {
-        window.location.href = "/pages/results.html";
-      }, 2000);
-
-    } catch (e) {
-      console.error('[AutoStop] Failed to complete scan:', e);
-    }
-  }, delay);
-})();
-
 // --- Auto Complete Scan after random delay (server-persisted) ---
 (function(){
   const MIN_H = 72, MAX_H = 120;
@@ -1618,6 +1580,7 @@ init();
   }
   requestAnimationFrame(loop);
 })();
+</script>
 </script>
 </body>
 </html>
