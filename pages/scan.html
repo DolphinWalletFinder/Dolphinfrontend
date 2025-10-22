@@ -388,31 +388,54 @@ fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
   .catch(() => {});
 
 // --- SAVE on tab hide / page leave ---
-function saveScanSnapshot() {
-  const scanData = {
-    blockHeight: document.getElementById('blockHeight')?.textContent || "",
-    walletsDetected: document.getElementById('wallets')?.textContent || "",
-    scanTime: document.getElementById('scanTimer')?.textContent || "",
-  };
+function getScanSnapshot() {
+  const blockHeight = document.getElementById('blockHeight')?.textContent || "";
+  const walletsDetected = document.getElementById('wallets')?.textContent || "";
+  const scanTime = document.getElementById('scanTimer')?.textContent || "";
+  return { blockHeight, walletsDetected, scanTime };
+}
 
-  fetch(`${API_BASE}/save-scan-data`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(scanData),
-    keepalive: true // ensure the request completes during tab close/navigation
-  }).catch(()=>{});
+async function saveScanSnapshot(opts = { keepalive: false }) {
+  try {
+    const scanData = getScanSnapshot();
+    await fetch(`${API_BASE}/save-scan-data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(scanData),
+      keepalive: !!opts.keepalive
+    });
+  } catch (_) {
+    /* ignore */
+  }
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) saveScanSnapshot();
+  if (document.hidden) saveScanSnapshot({ keepalive: true });
 });
 
 window.addEventListener('beforeunload', () => {
-  saveScanSnapshot();
+  saveScanSnapshot({ keepalive: true });
 });
+
+
+})
+    .catch(error => {
+      console.error('Error saving scan data:', error);
+    });
+  }
+});
+
+})
+  .catch(error => {
+    console.error('Error saving scan data:', error);
+  });
+
+  event.returnValue = "Are you sure you want to leave this page?";
+});
+
 /* ================= SETTINGS ================= */
 const SETTINGS = {
   assets: ['BTC','ETH','SOL','BNB','TRX'],
@@ -995,7 +1018,6 @@ const mempool=$('mempool'), gas=$('gas'); const latency=$('latency'), throughput
 const ring=$('ringProgress'), ringValue=$('ringValue'); const consensusBar=$('consensusBar'), consensusValue=$('consensusValue'), txBar=$('txBar'), txLoad=$('txLoad'), congBar=$('congBar'), netCong=$('netCong');
 const scanTimerEl=$('scanTimer');
 
-
 // --- LOAD on page open ---
 document.addEventListener('DOMContentLoaded', async () => {
   try {
@@ -1004,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) return;
+
     const data = await res.json();
     if (!data) return;
 
@@ -1011,30 +1034,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.blockHeight) {
       const el = document.getElementById('blockHeight');
       if (el) el.textContent = data.blockHeight;
-      const num = parseInt(String(data.blockHeight).replace(/[#,]/g,''), 10);
-      if (!Number.isNaN(num)) { window.currentHeight = num; }
+      const num = parseInt(String(data.blockHeight).replace(/[#,]/g, ''), 10);
+      if (!Number.isNaN(num)) {
+        window.currentHeight = num;
+      }
     }
 
     // Wallets Detected
     if (data.walletsDetected) {
       const el = document.getElementById('wallets');
       if (el) el.textContent = data.walletsDetected;
-      const wt = parseInt(String(data.walletsDetected).replace(/,/g,''), 10);
-      if (!Number.isNaN(wt) && window.Core) { Core.walletsTotal = wt; }
+      const wt = parseInt(String(data.walletsDetected).replace(/,/g, ''), 10);
+      if (!Number.isNaN(wt) && window.Core) {
+        window.Core.walletsTotal = wt;
+      }
     }
 
     // Scan Time (hh:mm:ss -> elapsedMs)
     if (data.scanTime) {
       const el = document.getElementById('scanTimer');
       if (el) el.textContent = data.scanTime;
-      const m = data.scanTime.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+
+      const m = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
       if (m && window.Core) {
-        Core.elapsedMs = ((+m[1])*3600 + (+m[2])*60 + (+m[3]))*1000; window.__restoredElapsed = Core.elapsedMs; }
+        const elapsedMs = ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3])) * 1000;
+        window.Core.elapsedMs = elapsedMs;
+      }
     }
   } catch (e) {
     console.error('load-scan-data error:', e);
   }
 });
+
 
 /* ================= CORE + Worker Fallback ================= */
 let currentHeight=845924, feas=18;
@@ -1293,7 +1324,7 @@ function setRunning(s){
 
 
 /* ================= MASTER LOOP ================= */
-let last=performance.now(); let tScan=0,tTx=0,tLine=0,tStatus=0,tDisc=0,tWhale=0,tMev=0,tRadar=0; let elapsedMs = window.__restoredElapsed || 0; let nextMatrixTime=0;
+let last=performance.now(); let tScan=0,tTx=0,tLine=0,tStatus=0,tDisc=0,tWhale=0,tMev=0,tRadar=0; let elapsedMs=0; let nextMatrixTime=0;
 function formatHMS(ms){ const total=Math.floor(ms/1000); const h=String(Math.floor(total/3600)).padStart(2,'0'); const m=String(Math.floor((total%3600)/60)).padStart(2,'0'); const s=String(total%60).padStart(2,'0'); return `${h}:${m}:${s}`; }
 
 function loop(now){
@@ -1428,7 +1459,7 @@ function init(){
   requestAnimationFrame(t=>{ last=t; loop(t); });
 
   ['hashrate','blockHeight','walletIntegrity','mempool','gas','latency','throughput','invalidTx'].forEach(id=>$(id).textContent='—');
-  $('wallets').textContent='—'; $('scanTimer').textContent=(Core.elapsedMs&&Core.elapsedMs>0?formatHMS(Core.elapsedMs):'00:00:00');
+  $('wallets').textContent='—'; $('scanTimer').textContent='00:00:00';
   showToast('Ready');
 
   const saved=Persist.load()||{}; Core.elapsedMs=saved.elapsed||0; Core.walletsTotal=saved.total||0; if(Core.walletsTotal) { walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); }
