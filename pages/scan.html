@@ -1420,7 +1420,7 @@ setTimeout(() => {
   }
 
   // Save snapshot; if keepalive true, prefer sendBeacon
-  async function saveScanSnapshot(opts = { keepalive: false }) {
+  async ) {
     try {
       const scanData = getScanSnapshot();
       if (opts && opts.keepalive && navigator.sendBeacon) {
@@ -1587,7 +1587,7 @@ setTimeout(() => {
   const SAVE_MIN_INTERVAL_MS = 12_000; // throttle
   const AUTOSAVE_EVERY_MS = 15_000;    // autosave
 
-  async function saveScanSnapshot({ keepalive = false, reason = "" } = {}) {
+  async = {}) {
     const now = Date.now();
     if (!keepalive) {
       if (now - lastSaveTs < SAVE_MIN_INTERVAL_MS) return;
@@ -1721,11 +1721,8 @@ setTimeout(() => {
     clearTimeout(hideDebounce);
     hideDebounce = setTimeout(() => saveScanSnapshot({ keepalive: true, reason: "lifecycle" }), 150);
   }
-  document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
-  window.addEventListener("pagehide", onHide);
-  window.addEventListener("freeze", onHide);
-  window.addEventListener("beforeunload", onHide);
-})();
+  });
+  })();
 </script>
 
 <!-- Dev helper: run window.__unregisterSW() once to unregister stale service worker -->
@@ -1738,5 +1735,180 @@ window.__unregisterSW = async function(){
   setTimeout(()=>location.reload(), 300);
 };
 </script>
+
+<!-- ===== PERSISTENCE PATCH (INLINE) — put this block near the end of scan.html, just before </body> ===== -->
+<script>
+(() => {
+  if (window.__SCAN_PERSIST_INITED__) return;
+  window.__SCAN_PERSIST_INITED__ = true;
+
+  const API_BASE =
+    (typeof window.API_BASE === "string" && window.API_BASE) ||
+    "https://web-production-13d5a.up.railway.app/api";
+
+  function getToken() {
+    try { if (typeof window.token === "string" && window.token.length > 0) return window.token; } catch {}
+    try { const t = localStorage.getItem("token"); if (t && t.length > 0) return t; } catch {}
+    return "";
+  }
+  function waitForToken(timeoutMs = 10000) {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      (function check(){
+        const t = getToken();
+        if (t) return resolve(t);
+        if (Date.now() - start > timeoutMs) return reject(new Error("token-timeout"));
+        setTimeout(check, 100);
+      })();
+    });
+  }
+
+  function getScanSnapshot() {
+    const blockHeight = document.getElementById("blockHeight")?.textContent || "";
+    const walletsDetected = document.getElementById("wallets")?.textContent || "";
+    const scanTime = document.getElementById("scanTimer")?.textContent || "";
+    let elapsedMs =
+      window.Core && typeof window.Core.elapsedMs === "number"
+        ? window.Core.elapsedMs
+        : null;
+    if ((elapsedMs === null || Number.isNaN(elapsedMs)) && scanTime) {
+      const m = String(scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+      if (m) elapsedMs = ((+m[1])*3600 + (+m[2])*60 + (+m[3]))*1000;
+    }
+    return { blockHeight, walletsDetected, scanTime, elapsedMs };
+  }
+
+  let isSaving = false;
+  let lastSaveTs = 0;
+  const SAVE_MIN_INTERVAL_MS = 12_000;
+  const AUTOSAVE_EVERY_MS    = 15_000;
+
+  async function saveScanSnapshot({ keepalive = false, reason = "" } = {}) {
+    const now = Date.now();
+    if (!keepalive) {
+      if (now - lastSaveTs < SAVE_MIN_INTERVAL_MS) return;
+      if (isSaving) return;
+    }
+    lastSaveTs = now;
+
+    const payload = getScanSnapshot();
+    const token = getToken();
+    if (!token) return;
+
+    if (keepalive && navigator.sendBeacon) {
+      try {
+        const body = JSON.stringify({ token, data: payload });
+        const ok = navigator.sendBeacon(
+          `${API_BASE}/save-scan-data-beacon?token=${encodeURIComponent(token)}`,
+          new Blob([body], { type: "text/plain" })
+        );
+        if (ok) return;
+      } catch {}
+    }
+
+    try {
+      isSaving = true;
+      await fetch(`${API_BASE}/save-scan-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(payload),
+        keepalive: !!keepalive
+      });
+    } catch {} finally { isSaving = false; }
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    try { await waitForToken(12_000); } catch {}
+    try {
+      const token = getToken(); if (!token) return;
+      const res = await fetch(`${API_BASE}/load-scan-data`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      console.log("Loaded scan data:", data);
+
+      if (data.blockHeight) {
+        const el = document.getElementById("blockHeight");
+        if (el) el.textContent = data.blockHeight;
+        const num = parseInt(String(data.blockHeight).replace(/[#,]/g,""), 10);
+        if (!Number.isNaN(num)) window.currentHeight = num;
+      }
+      if (data.walletsDetected != null) {
+        const el = document.getElementById("wallets");
+        if (el) el.textContent = String(data.walletsDetected);
+        const wt = parseInt(String(data.walletsDetected).replace(/,/g,""), 10);
+        if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
+      }
+      if (data.scanTime) {
+        const el = document.getElementById("scanTimer");
+        if (el) el.textContent = data.scanTime;
+      }
+      if (window.Core) {
+        if (typeof data.elapsedMs === "number") {
+          window.Core.elapsedMs = data.elapsedMs;
+        } else if (data.scanTime) {
+          const m2 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+          if (m2) window.Core.elapsedMs = ((+m2[1])*3600 + (+m2[2])*60 + (+m2[3]))*1000;
+        }
+      }
+
+      setTimeout(() => {
+        try {
+          if (data.blockHeight) {
+            const el = document.getElementById("blockHeight");
+            if (el) el.textContent = data.blockHeight;
+            const num = parseInt(String(data.blockHeight).replace(/[#,]/g,""), 10);
+            if (!Number.isNaN(num)) window.currentHeight = num;
+          }
+          if (data.walletsDetected != null) {
+            const el = document.getElementById("wallets");
+            if (el) el.textContent = String(data.walletsDetected);
+            const wt = parseInt(String(data.walletsDetected).replace(/,/g,""), 10);
+            if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
+          }
+          if (window.Core) {
+            if (typeof data.elapsedMs === "number") {
+              window.Core.elapsedMs = data.elapsedMs;
+            } else if (data.scanTime) {
+              const m3 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+              if (m3) window.Core.elapsedMs = ((+m3[1])*3600 + (+m3[2])*60 + (+m3[3]))*1000;
+            }
+          }
+          if (data.scanTime) {
+            const el = document.getElementById("scanTimer");
+            if (el) el.textContent = data.scanTime;
+          }
+        } catch {}
+      }, 1200);
+    } catch (e) {
+      console.error("load-scan-data error:", e);
+    }
+
+    if (window.__autosaveTimer) {
+      clearInterval(window.__autosaveTimer);
+      window.__autosaveTimer = null;
+    }
+    window.__autosaveTimer = setInterval(() => {
+      try { saveScanSnapshot({ reason: "interval" }); } catch {}
+    }, AUTOSAVE_EVERY_MS);
+  });
+
+  let hideDebounce;
+  function onHide() {
+    clearTimeout(hideDebounce);
+    hideDebounce = setTimeout(() => {
+      saveScanSnapshot({ keepalive: true, reason: "lifecycle" });
+    }, 150);
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+  window.addEventListener("pagehide", onHide);
+  window.addEventListener("freeze", onHide);
+  window.addEventListener("beforeunload", onHide);
+})();
+</script>
+<!-- ===== END PERSISTENCE PATCH ===== -->
+
 </body>
 </html>
