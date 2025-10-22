@@ -1059,7 +1059,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (e) {
     console.error('load-scan-data error:', e);
-  }0 };
+  }
+});
 let worker=null, workerOk=false;
 
 const Metrics = { emaPerSec:0, lastTotal:0, lastTs:performance.now(),
