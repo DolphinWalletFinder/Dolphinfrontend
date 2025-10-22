@@ -386,13 +386,7 @@ fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
     if (el) el.textContent = data?.username || "User";
   })
   .catch(() => {});
-
-
-
-
-
-
-
+  
 /* ================= SETTINGS ================= */
 const SETTINGS = {
   assets: ['BTC','ETH','SOL','BNB','TRX'],
@@ -1535,9 +1529,6 @@ setTimeout(() => {
       try { console.error('load-scan-data error:', e); } catch (_) {}
     }
   });
-
-
-
 </script>
 <!-- PERSISTENCE PATCH: single-instance + throttled + lifecycle beacon (final) -->
 <script>
@@ -1737,9 +1728,6 @@ setTimeout(() => {
 })();
 </script>
 
-</body>
-</html>
-
 <!-- Dev helper: run window.__unregisterSW() once to unregister stale service worker -->
 <script>
 window.__unregisterSW = async function(){
@@ -1750,3 +1738,5 @@ window.__unregisterSW = async function(){
   setTimeout(()=>location.reload(), 300);
 };
 </script>
+</body>
+</html>
