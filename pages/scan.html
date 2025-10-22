@@ -421,21 +421,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 
-})
-    .catch(error => {
-      console.error('Error saving scan data:', error);
-    });
-  }
-});
-
-})
-  .catch(error => {
-    console.error('Error saving scan data:', error);
-  });
-
-  event.returnValue = "Are you sure you want to leave this page?";
-});
-
 /* ================= SETTINGS ================= */
 const SETTINGS = {
   assets: ['BTC','ETH','SOL','BNB','TRX'],
