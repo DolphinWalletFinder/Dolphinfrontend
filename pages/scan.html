@@ -392,7 +392,14 @@ function getScanSnapshot() {
   const blockHeight = document.getElementById('blockHeight')?.textContent || "";
   const walletsDetected = document.getElementById('wallets')?.textContent || "";
   const scanTime = document.getElementById('scanTimer')?.textContent || "";
-  return { blockHeight, walletsDetected, scanTime };
+
+  let elapsedMs = (window.Core && typeof window.Core.elapsedMs === 'number') ? window.Core.elapsedMs : null;
+  if ((elapsedMs === null || Number.isNaN(elapsedMs)) && scanTime) {
+    const m = String(scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+    if (m) elapsedMs = ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3])) * 1000;
+  }
+
+  return { blockHeight, walletsDetected, scanTime, elapsedMs };
 }
 
 async function saveScanSnapshot(opts = { keepalive: false }) {
@@ -419,8 +426,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', () => {
   saveScanSnapshot({ keepalive: true });
 });
-
-
 /* ================= SETTINGS ================= */
 const SETTINGS = {
   assets: ['BTC','ETH','SOL','BNB','TRX'],
@@ -1013,6 +1018,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res.ok) return;
 
     const data = await res.json();
+
+    // Prefer server-provided elapsedMs first
+    if (typeof data.elapsedMs === 'number' && window.Core) {
+      window.Core.elapsedMs = data.elapsedMs;
+    }
+
     if (!data) return;
 
     // Block Height
@@ -1048,13 +1059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (e) {
     console.error('load-scan-data error:', e);
-  }
-});
-
-
-/* ================= CORE + Worker Fallback ================= */
-let currentHeight=845924, feas=18;
-const Core={ running:false, elapsedMs:0, walletsTotal:0 };
+  }0 };
 let worker=null, workerOk=false;
 
 const Metrics = { emaPerSec:0, lastTotal:0, lastTs:performance.now(),
