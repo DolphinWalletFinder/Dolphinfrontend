@@ -17,16 +17,15 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k)))))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -40,25 +39,28 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 1) Bypass cross-origin requests (CDNs, APIs on other domains)
+  // 1) Bypass cross-origin requests (CDNs, APIs on other domains) to avoid polluting cache
   if (url.origin !== self.location.origin) {
     event.respondWith(fetch(req).catch(() => new Response(null, { status: 503 })));
     return;
   }
 
-  // 2) Bypass API endpoints on same origin (/api/...)
+  // 2) Bypass API endpoints on same origin (/api/...) — always network
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(req).catch(() => new Response(
-      JSON.stringify({ error: "offline" }),
-      { status: 503, headers: { "Content-Type": "application/json" } }
-    )));
+    event.respondWith(
+      fetch(req).catch(
+        () =>
+          new Response(JSON.stringify({ error: "offline" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          })
+      )
+    );
     return;
   }
 
-  // 3) For SPA navigations (HTML): network-first, then cache, then fallback to /index.html
-  const isHTMLNavigation =
-    req.mode === "navigate" ||
-    (req.headers.get("accept") || "").includes("text/html");
+  // 3) Navigations (HTML): network-first, then cache, fallback to /index.html
+  const isHTMLNavigation = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
 
   if (isHTMLNavigation) {
     event.respondWith(
@@ -77,13 +79,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 4) Static assets (CSS/JS/images): cache-first, then network, then (optionally) 504
+  // 4) Static assets: cache-first
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req)
         .then((res) => {
-          // only cache successful, same-origin, basic responses
           if (res && res.ok && res.type === "basic") {
             const clone = res.clone();
             caches.open(CACHE_NAME).then((c) => c.put(req, clone)).catch(() => {});
