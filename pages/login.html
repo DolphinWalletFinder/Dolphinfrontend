@@ -9,11 +9,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
 <style>
-  /* Visual styles (same as previous) */
+  /* Visual styles */
   :root{ --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89; --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60) }
   *{box-sizing:border-box} html,body{height:100%}
   body{margin:0;color:#eafaff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden;overflow-y:auto;
-    background:radial-gradient(1200px 600px at 70% 20%, rgba(30,150,255,.10), transparent 60%),radial-gradient(1000px 600px at 10% 80%, rgba(20,255,137,.10), transparent 60%),linear-gradient(180deg,#060912,#05070e 40%,#04060c);}
+    background:radial-gradient(1200px 600px at 70% 20%, rgba(30,150,255,.10), transparent 60%),
+               radial-gradient(1000px 600px at 10% 80%, rgba(20,255,137,.10), transparent 60%),
+               linear-gradient(180deg,#060912,#05070e 40%,#04060c);}
   .stage{min-height:100%;position:relative;display:grid;place-items:center;padding:clamp(12px,4vw,32px)}
   .hud{position:relative;width:min(1080px,96vw);display:grid;grid-template-columns:1.1fr 1.2fr;border-radius:24px;overflow:hidden;
        background:linear-gradient(180deg,var(--panel),var(--panel2));
@@ -46,9 +48,12 @@
        background:linear-gradient(95deg,#35a7ff,#0ff1e7,#14ff89,#35a7ff);background-size:220% 100%;box-shadow:0 24px 50px rgba(53,167,255,.30), inset 0 0 0 1px rgba(0,0,0,.28)}
   .btn:disabled{opacity:.55;cursor:not-allowed}
   .footer{width:min(1080px,96vw);margin:18px auto 0;text-align:center;color:rgba(190,245,255,.85);font-size:.86rem}
+
   /* Forgot modal */
   .hidden{display:none}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999}
+  /* ensure hidden beats .modal's display:flex */
+  .modal.hidden{display:none !important}
   .modal-content{background:#061018;padding:18px;border-radius:12px;width:100%;max-width:420px;border:1px solid rgba(90,200,255,.12)}
   .modal h3{margin:0 0 8px;font-size:1.05rem;color:#dff}
   .modal .row{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
@@ -166,6 +171,7 @@
     <div class="footer">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
   </main>
 
+<!-- Load API helpers as a module to avoid global const collisions -->
 <script type="module" src="../js/login-api.js"></script>
 <script>
   // All inline comments in English
@@ -206,7 +212,7 @@
     }); }
   })();
 
-  // Client-side validation regexes
+  // Client-side validation regexes (UI scope)
   const USERNAME_RE = /^[A-Za-z0-9]+$/;
   const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -257,40 +263,79 @@
     }
   });
 
-  // Forgot password modal logic
-  const forgotLink = document.getElementById('forgot-link');
-  const forgotModal = document.getElementById('forgot-modal');
+  // ===== Forgot password modal (accessible) =====
+  const forgotLink   = document.getElementById('forgot-link');
+  const forgotModal  = document.getElementById('forgot-modal');
   const forgotCancel = document.getElementById('forgot-cancel');
-  const forgotForm = document.getElementById('forgot-form');
-  const forgotMsg = document.getElementById('forgot-msg');
+  const forgotForm   = document.getElementById('forgot-form');
+  const forgotMsg    = document.getElementById('forgot-msg');
+  const mainRoot     = document.querySelector('main'); // content to inert when modal open
+
+  function openForgotModal() {
+    // Reset fields/messages
+    forgotMsg.textContent = '';
+    document.getElementById('forgot-username').value = '';
+    document.getElementById('forgot-email').value = '';
+    document.getElementById('forgot-newpass').value = '';
+    document.getElementById('forgot-newpass2').value = '';
+
+    // Show modal & update a11y state
+    forgotModal.classList.remove('hidden');
+    forgotModal.removeAttribute('aria-hidden');
+
+    // Prevent interaction outside modal
+    if (mainRoot) mainRoot.setAttribute('inert', '');
+
+    // Move focus into modal
+    setTimeout(() => {
+      const first = document.getElementById('forgot-username');
+      if (first) first.focus();
+    }, 0);
+  }
+
+  function closeForgotModal() {
+    // Hide modal & update a11y state
+    forgotModal.classList.add('hidden');
+    forgotModal.setAttribute('aria-hidden', 'true');
+
+    // Restore main interactions
+    if (mainRoot) mainRoot.removeAttribute('inert');
+
+    // Return focus to trigger element
+    if (forgotLink) forgotLink.focus();
+  }
 
   if (forgotLink) {
     forgotLink.addEventListener('click', (e) => {
       e.preventDefault();
-      forgotMsg.textContent = '';
-      document.getElementById('forgot-username').value = '';
-      document.getElementById('forgot-email').value = '';
-      document.getElementById('forgot-newpass').value = '';
-      document.getElementById('forgot-newpass2').value = '';
-      forgotModal.classList.remove('hidden');
-      forgotModal.setAttribute('aria-hidden', 'false');
+      openForgotModal();
     });
   }
-  if (forgotCancel) {
-    forgotCancel.addEventListener('click', () => {
-      forgotModal.classList.add('hidden');
-      forgotModal.setAttribute('aria-hidden', 'true');
-    });
-  }
+  if (forgotCancel) forgotCancel.addEventListener('click', () => closeForgotModal());
 
+  // Close on backdrop click
+  forgotModal.addEventListener('click', (e) => {
+    if (e.target === forgotModal) closeForgotModal();
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    const isOpen = !forgotModal.classList.contains('hidden');
+    if (isOpen && e.key === 'Escape') {
+      e.preventDefault();
+      closeForgotModal();
+    }
+  });
+
+  // Forgot form submit
   if (forgotForm) {
     forgotForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       forgotMsg.textContent = '';
 
       const username = document.getElementById('forgot-username').value.trim();
-      const email = document.getElementById('forgot-email').value.trim();
-      const newPass = document.getElementById('forgot-newpass').value;
+      const email    = document.getElementById('forgot-email').value.trim();
+      const newPass  = document.getElementById('forgot-newpass').value;
       const newPass2 = document.getElementById('forgot-newpass2').value;
 
       if (!username){ forgotMsg.textContent = 'Username is required.'; return; }
@@ -305,10 +350,7 @@
         const resp = await window.DWF_API.resetPassword(username, email, newPass);
         if (resp && resp.ok) {
           forgotMsg.textContent = 'If provided username/email are valid, password has been updated.';
-          setTimeout(() => {
-            forgotModal.classList.add('hidden');
-            forgotModal.setAttribute('aria-hidden', 'true');
-          }, 1100);
+          setTimeout(() => closeForgotModal(), 1100);
         } else {
           forgotMsg.textContent = 'Reset request processed.';
         }
@@ -347,4 +389,3 @@
 </script>
 </body>
 </html>
-
