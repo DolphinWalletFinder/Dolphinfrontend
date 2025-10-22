@@ -1536,22 +1536,6 @@ setTimeout(() => {
     }
   });
 
-  // Extra lifecycle saves
-  });
-  window.addEventListener('pagehide', () => { saveScanSnapshot({ keepalive: true }); });
-  window.addEventListener('freeze', () => { saveScanSnapshot({ keepalive: true }); });
-  });
-
-  // Periodic autosave
-  if (!window.__autosaveTimer) {
-    window.__autosaveTimer = setInterval(() => {
-      try {
-        if (typeof token === 'string' && token.length > 0) saveScanSnapshot();
-      } catch (_) {}
-    }, 10000);
-  }
-})();
-</script>
 
 
 <!-- PERSISTENCE PATCH: single-instance + throttled + lifecycle beacon (final) -->
