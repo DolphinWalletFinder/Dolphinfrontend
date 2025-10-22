@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
+<script>window.Core=window.Core||{running:false,walletsTotal:0,elapsedMs:0};window.currentHeight=window.currentHeight||0;</script>
+
 <script>window.Core=window.Core||{running:false,walletsTotal:0,elapsedMs:0};</script>
 
 <meta charset="utf-8" />
@@ -1385,7 +1387,7 @@ function loop(now){
       throughput.textContent = `${thr.toFixed(1)} Gb/s`;
       invalidTx.textContent = (0.08 + Math.random()*0.18).toFixed(2)+'%';
 
-      blockHeight.textContent = '#'+(++currentHeight).toLocaleString('en-US');
+      blockHeight.textContent = '#'+ (++window.currentHeight).toLocaleString('en-US');
 
       feas = clamp(10 + cong*0.55 + rand(-10,6), 8, 92);
       const C=2*Math.PI*50; ring.style.strokeDashoffset=(C*(1-feas/100)).toFixed(1);
