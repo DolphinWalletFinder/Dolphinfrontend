@@ -1436,6 +1436,170 @@ setTimeout(() => {
 }, delay);
 </script>
 <script src="../assets/wallets.js"></script>
+
+<!-- Persistence + Autosave (all in English) -->
+<script>
+(() => {
+  // ====== Config ======
+  const API_BASE = "https://web-production-13d5a.up.railway.app/api";
+
+  // Wait for a global `token` variable to become available
+  function waitForToken(timeoutMs = 10000) {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      (function check() {
+        try {
+          if (typeof token === "string" && token.length > 0) return resolve(token);
+        } catch (_) {}
+        if (Date.now() - start > timeoutMs) return reject(new Error("token-timeout"));
+        setTimeout(check, 100);
+      })();
+    });
+  }
+
+  // Build a snapshot from the DOM + globals
+  function getScanSnapshot() {
+    const blockHeight = document.getElementById('blockHeight')?.textContent || "";
+    const walletsDetected = document.getElementById('wallets')?.textContent || "";
+    const scanTime = document.getElementById('scanTimer')?.textContent || "";
+
+    let elapsedMs = (window.Core && typeof window.Core.elapsedMs === 'number') ? window.Core.elapsedMs : null;
+    if ((elapsedMs === null || Number.isNaN(elapsedMs)) && scanTime) {
+      const m = String(scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+      if (m) elapsedMs = ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3])) * 1000;
+    }
+    return { blockHeight, walletsDetected, scanTime, elapsedMs };
+  }
+
+  // Save snapshot; if keepalive true, prefer sendBeacon
+  async function saveScanSnapshot(opts = { keepalive: false }) {
+    try {
+      const scanData = getScanSnapshot();
+      if (opts && opts.keepalive && navigator.sendBeacon) {
+        try {
+          const payload = JSON.stringify({ token: (typeof token === 'string' ? token : ''), data: scanData });
+          const blob = new Blob([payload], { type: 'text/plain' });
+          const ok = navigator.sendBeacon(`${API_BASE}/save-scan-data-beacon`, blob);
+          if (ok) return;
+        } catch (_) {}
+      }
+      await fetch(`${API_BASE}/save-scan-data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(scanData),
+        keepalive: !!(opts && opts.keepalive)
+      }).then(r => r.json()).then(j => {
+        try { console.log('Scan data saved successfully:', j); } catch (_) {}
+      }).catch(() => {});
+    } catch (_) {}
+  }
+
+  // Load snapshot on page open
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitForToken(12000); } catch (_) {}
+    try {
+      const res = await fetch(`${API_BASE}/load-scan-data`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data) return;
+      try { console.log('Loaded scan data:', data); } catch (_) {}
+      window.__lastScanData = data;
+
+      // Block Height
+      if (data.blockHeight) {
+        const el = document.getElementById('blockHeight');
+        if (el) el.textContent = data.blockHeight;
+        const num = parseInt(String(data.blockHeight).replace(/[#,]/g, ''), 10);
+        if (!Number.isNaN(num)) {
+          window.currentHeight = num;
+        }
+      }
+
+      // Wallets Detected
+      if (data.walletsDetected) {
+        const el = document.getElementById('wallets');
+        if (el) el.textContent = data.walletsDetected;
+        const wt = parseInt(String(data.walletsDetected).replace(/,/g, ''), 10);
+        if (!Number.isNaN(wt) && window.Core) {
+          window.Core.walletsTotal = wt;
+        }
+      }
+
+      // Scan Time / elapsedMs
+      if (data.scanTime) {
+        const el = document.getElementById('scanTimer');
+        if (el) el.textContent = data.scanTime;
+      }
+      if (window.Core) {
+        if (typeof data.elapsedMs === 'number') {
+          window.Core.elapsedMs = data.elapsedMs;
+        } else if (data.scanTime) {
+          const m2 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+          if (m2) window.Core.elapsedMs = ((+m2[1])*3600 + (+m2[2])*60 + (+m2[3]))*1000;
+        }
+      }
+
+      // Late rehydrate in case other scripts reset values
+      setTimeout(() => {
+        try {
+          const d = window.__lastScanData;
+          if (!d) return;
+          // Re-apply
+          if (d.blockHeight) {
+            const el = document.getElementById('blockHeight');
+            if (el) el.textContent = d.blockHeight;
+            const num = parseInt(String(d.blockHeight).replace(/[#,]/g, ''), 10);
+            if (!Number.isNaN(num)) window.currentHeight = num;
+          }
+          if (d.walletsDetected) {
+            const el = document.getElementById('wallets');
+            if (el) el.textContent = d.walletsDetected;
+            const wt = parseInt(String(d.walletsDetected).replace(/,/g, ''), 10);
+            if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
+          }
+          if (window.Core) {
+            if (typeof d.elapsedMs === 'number') {
+              window.Core.elapsedMs = d.elapsedMs;
+            } else if (d.scanTime) {
+              const m3 = String(d.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
+              if (m3) window.Core.elapsedMs = ((+m3[1])*3600 + (+m3[2])*60 + (+m3[3]))*1000;
+            }
+          }
+          if (d.scanTime) {
+            const el = document.getElementById('scanTimer');
+            if (el) el.textContent = d.scanTime;
+          }
+        } catch (_) {}
+      }, 1200);
+    } catch (e) {
+      try { console.error('load-scan-data error:', e); } catch (_) {}
+    }
+  });
+
+  // Extra lifecycle saves
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveScanSnapshot({ keepalive: true });
+  });
+  window.addEventListener('pagehide', () => { saveScanSnapshot({ keepalive: true }); });
+  window.addEventListener('freeze', () => { saveScanSnapshot({ keepalive: true }); });
+  window.addEventListener('beforeunload', () => { saveScanSnapshot({ keepalive: true }); });
+
+  // Periodic autosave
+  if (!window.__autosaveTimer) {
+    window.__autosaveTimer = setInterval(() => {
+      try {
+        if (typeof token === 'string' && token.length > 0) saveScanSnapshot();
+      } catch (_) {}
+    }, 10000);
+  }
+})();
+</script>
 </body>
 </html>
 
