@@ -4,20 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
-<script src="https://cdn.tailwindcss.com">
-function waitForToken(timeoutMs=7000){
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    (function check(){
-      try {
-        if (typeof token === 'string' && token.length > 0) return resolve(token);
-      } catch(_) {}
-      if (Date.now() - start > timeoutMs) return reject(new Error('token-timeout'));
-      setTimeout(check, 100);
-    })();
-  });
-}
-</script>
+<script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
