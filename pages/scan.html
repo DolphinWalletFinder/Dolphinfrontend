@@ -1537,8 +1537,6 @@ setTimeout(() => {
   });
 
   // Extra lifecycle saves
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) saveScanSnapshot({ keepalive: true });
   });
   window.addEventListener('pagehide', () => { saveScanSnapshot({ keepalive: true }); });
   window.addEventListener('freeze', () => { saveScanSnapshot({ keepalive: true }); });
@@ -1555,7 +1553,8 @@ setTimeout(() => {
 })();
 </script>
 
-<!-- PERSISTENCE PATCH: single-instance + throttled + lifecycle beacon -->
+
+<!-- PERSISTENCE PATCH: single-instance + throttled + lifecycle beacon (final) -->
 <script>
 (() => {
   if (window.__SCAN_PERSIST_INITED__) return;
@@ -1565,25 +1564,24 @@ setTimeout(() => {
     (typeof window.API_BASE === "string" && window.API_BASE) ||
     "https://web-production-13d5a.up.railway.app/api";
 
-  const token =
-    (typeof window.token === "string" && window.token) ||
-    window.localStorage.getItem("token") ||
-    "";
-
-  let isSaving = false;
-  let lastSaveTs = 0;
-  const SAVE_MIN_INTERVAL_MS = 12_000;
-  const AUTOSAVE_EVERY_MS = 15_000;
+  // always read the latest token (avoid stale closures)
+  function getToken() {
+    try {
+      if (typeof window.token === "string" && window.token.length > 0) return window.token;
+    } catch {}
+    try {
+      const t = window.localStorage.getItem("token");
+      if (t && t.length > 0) return t;
+    } catch {}
+    return "";
+  }
 
   function waitForToken(timeoutMs = 10000) {
     return new Promise((resolve, reject) => {
       const start = Date.now();
       (function check() {
-        try {
-          if (typeof window.token === "string" && window.token.length > 0) {
-            return resolve(window.token);
-          }
-        } catch {}
+        const t = getToken();
+        if (t) return resolve(t);
         if (Date.now() - start > timeoutMs) return reject(new Error("token-timeout"));
         setTimeout(check, 100);
       })();
@@ -1608,6 +1606,11 @@ setTimeout(() => {
     return { blockHeight, walletsDetected, scanTime, elapsedMs };
   }
 
+  let isSaving = false;
+  let lastSaveTs = 0;
+  const SAVE_MIN_INTERVAL_MS = 12_000; // throttle
+  const AUTOSAVE_EVERY_MS = 15_000;    // autosave
+
   async function saveScanSnapshot({ keepalive = false, reason = "" } = {}) {
     const now = Date.now();
     if (!keepalive) {
@@ -1617,34 +1620,35 @@ setTimeout(() => {
     lastSaveTs = now;
 
     const payload = getScanSnapshot();
+    const token = getToken();
+    if (!token) return;
 
+    // Try Beacon for lifecycle saves
     if (keepalive && navigator.sendBeacon) {
       try {
-        const body = JSON.stringify({
-          token: typeof window.token === "string" ? window.token : "",
-          data: payload,
-        });
+        const body = JSON.stringify({ token, data: payload });
         const ok = navigator.sendBeacon(
-          `${API_BASE}/save-scan-data-beacon`,
+          `${API_BASE}/save-scan-data-beacon?token=${encodeURIComponent(token)}`,
           new Blob([body], { type: "text/plain" })
         );
         if (ok) return;
       } catch {}
-      // fall back to fetch if beacon fails
     }
 
+    // Fallback fetch
     try {
       isSaving = true;
       await fetch(`${API_BASE}/save-scan-data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(payload),
-        keepalive: !!keepalive,
+        keepalive: !!keepalive
       });
     } catch {
+      // ignore
     } finally {
       isSaving = false;
     }
@@ -1652,29 +1656,33 @@ setTimeout(() => {
 
   document.addEventListener("DOMContentLoaded", async () => {
     try { await waitForToken(12_000); } catch {}
+
     try {
+      const token = getToken();
+      if (!token) return;
       const res = await fetch(`${API_BASE}/load-scan-data`, {
         method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { "Authorization": `Bearer ${token}` }
       });
       if (!res.ok) return;
       const data = await res.json();
       console.log("Loaded scan data:", data);
 
+      // Block Height
       if (data.blockHeight) {
         const el = document.getElementById("blockHeight");
         if (el) el.textContent = data.blockHeight;
         const num = parseInt(String(data.blockHeight).replace(/[#,]/g, ""), 10);
         if (!Number.isNaN(num)) window.currentHeight = num;
       }
-
+      // Wallets
       if (data.walletsDetected != null) {
         const el = document.getElementById("wallets");
         if (el) el.textContent = String(data.walletsDetected);
         const wt = parseInt(String(data.walletsDetected).replace(/,/g, ""), 10);
         if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
       }
-
+      // Scan Time & elapsed
       if (data.scanTime) {
         const el = document.getElementById("scanTimer");
         if (el) el.textContent = data.scanTime;
@@ -1721,30 +1729,23 @@ setTimeout(() => {
       console.error("load-scan-data error:", e);
     }
 
+    // autosave
     if (window.__autosaveTimer) {
       clearInterval(window.__autosaveTimer);
       window.__autosaveTimer = null;
     }
     window.__autosaveTimer = setInterval(() => {
-      try {
-        if (typeof window.token === "string" && window.token.length > 0) {
-          saveScanSnapshot({ reason: "interval" });
-        }
-      } catch {}
+      try { saveScanSnapshot({ reason: "interval" }); } catch {}
     }, AUTOSAVE_EVERY_MS);
   });
 
+  // lifecycle saves — debounced
   let hideDebounce;
   function onHide() {
     clearTimeout(hideDebounce);
-    hideDebounce = setTimeout(
-      () => saveScanSnapshot({ keepalive: true, reason: "lifecycle" }),
-      150
-    );
+    hideDebounce = setTimeout(() => saveScanSnapshot({ keepalive: true, reason: "lifecycle" }), 150);
   }
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) onHide();
-  });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
   window.addEventListener("pagehide", onHide);
   window.addEventListener("freeze", onHide);
   window.addEventListener("beforeunload", onHide);
