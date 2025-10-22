@@ -1438,3 +1438,14 @@ setTimeout(() => {
 <script src="../assets/wallets.js"></script>
 </body>
 </html>
+
+<!-- Dev helper: run window.__unregisterSW() once to unregister stale service worker -->
+<script>
+window.__unregisterSW = async function(){
+  if (!('serviceWorker' in navigator)) return;
+  const regs = await navigator.serviceWorker.getRegistrations();
+  for (const r of regs) { try { await r.unregister(); } catch(_){} }
+  console.debug('Service workers unregistered. Reloading...');
+  setTimeout(()=>location.reload(), 300);
+};
+</script>
