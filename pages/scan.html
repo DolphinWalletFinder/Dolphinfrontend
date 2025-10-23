@@ -1382,13 +1382,35 @@ function init(){
   $('wallets').textContent='—'; $('scanTimer').textContent='00:00:00';
   showToast('Ready');
 
-  const saved=Persist.load()||{}; Core.elapsedMs=saved.elapsed||0; Core.walletsTotal=saved.total||0; if(Core.walletsTotal) { walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); }
+  const saved = (Persist.load?.() || (window.SP_Local?.load?.() || null)) || {};
+if (saved && saved.core) {
+
+  Core.elapsedMs    = saved.core.elapsedMs    | 0;
+  Core.walletsTotal = saved.core.walletsTotal | 0;
+} else {
+
+  Core.elapsedMs    = saved.elapsed | 0;
+  Core.walletsTotal = saved.total   | 0;
+}
+if (Core.walletsTotal) {
+  walletsEl.textContent = formatCount(Core.walletsTotal);
+  fitTextId(walletsEl);
+}
+
 
   worker=makeWorker();
   if(worker){ worker.onmessage=(e)=>{ const d=e.data; if(d.t==='S'){ Core.walletsTotal=d.total|0; Core.elapsedMs=d.elapsed|0; walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); } }; worker.postMessage({t:'SYNC',total:Core.walletsTotal,elapsed:Core.elapsedMs}); }
 
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
-  addEventListener('beforeunload',()=>{ Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal}); });
+  addEventListener('beforeunload', ()=>{
+  const payload = {
+    elapsed: Core.elapsedMs,
+    total:   Core.walletsTotal,
+    core: { elapsedMs: Core.elapsedMs, walletsTotal: Core.walletsTotal }
+  };
+  Persist.save(payload);
+});
+
  startConnectivityWatchdog();
 }
 init();
