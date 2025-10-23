@@ -1415,14 +1415,11 @@ const SP_PERSIST_KEY = 'dolphin_state_v4';
 const SP_SAVE_DEBOUNCE_MS = 3000;
 const SP_FLUSH_MS = 15000;
 
-// Try to reuse your API base if defined; fallback to '/api'
+// Use API_BASE exactly, fallback to hardcoded Railway API
 let SP_API_BASE = 'https://web-production-13d5a.up.railway.app/api';
-try {
-  if (typeof API_BASE === 'string' && API_BASE) {
-    const u = new URL(API_BASE, window.location.href);
-    SP_API_BASE = (u.pathname.endsWith('/api')) ? u.pathname : (u.pathname.replace(/\/+$/,'') + '/api');
-  }
-} catch(e){}
+if (typeof API_BASE === 'string' && API_BASE) {
+  SP_API_BASE = API_BASE.replace(/\/$/, '');
+}
 
 const SP_Local = {
   save(obj){ try{ localStorage.setItem(SP_PERSIST_KEY, JSON.stringify(obj)); }catch(e){} },
