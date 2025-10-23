@@ -375,18 +375,18 @@
   </div>
 
 <script>
-const API_BASE = "https://web-production-13d5a.up.railway.app/api";
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "login.html";
+  const API_BASE = "https://web-production-b86d.up.railway.app/api";
+  const token = localStorage.getItem("token");
+  if (!token) window.location.href = "login.html";
 
-fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
-  .then(res => res.json())
-  .then(data => {
-    const el = document.getElementById("username");
-    if (el) el.textContent = data?.username || "User";
-  })
-  .catch(() => {});
-  
+  fetch(`${API_BASE}/me`, { headers: { Authorization: "Bearer " + token } })
+    .then(res => res.json())
+    .then(data => {
+      const el = document.getElementById("username");
+      if (el) el.textContent = data?.username || "User";
+    })
+    .catch(() => {});
+
 /* ================= SETTINGS ================= */
 const SETTINGS = {
   assets: ['BTC','ETH','SOL','BNB','TRX'],
@@ -1385,530 +1385,165 @@ setTimeout(() => {
 </script>
 <script src="../assets/wallets.js"></script>
 
-<!-- Persistence + Autosave (all in English) -->
 <script>
-(() => {
-  // ====== Config ======
-  const API_BASE = "https://web-production-13d5a.up.railway.app/api";
+/* ======= Scan Persistence (local + server) =======
+   - Debounced saving of minimal scan state
+   - Restores on load (paused; user must click Start)
+   - Works even if window.Core / window.Fallback are undefined (no-ops)
+   - Requires: authentication token in localStorage ('token')
+   - Server endpoints: GET/POST /api/scan/state
+*/
+const SP_PERSIST_KEY = 'dolphin_state_v4';
+const SP_SAVE_DEBOUNCE_MS = 3000;
+const SP_FLUSH_MS = 15000;
 
-  // Wait for a global `token` variable to become available
-  function waitForToken(timeoutMs = 10000) {
-    return new Promise((resolve, reject) => {
-      const start = Date.now();
-      (function check() {
-        try {
-          if (typeof token === "string" && token.length > 0) return resolve(token);
-        } catch (_) {}
-        if (Date.now() - start > timeoutMs) return reject(new Error("token-timeout"));
-        setTimeout(check, 100);
-      })();
-    });
+// Try to reuse your API base if defined; fallback to '/api'
+let SP_API_BASE = '/api';
+try {
+  if (typeof API_BASE === 'string' && API_BASE) {
+    const u = new URL(API_BASE, window.location.href);
+    SP_API_BASE = (u.pathname.endsWith('/api')) ? u.pathname : (u.pathname.replace(/\/+$/,'') + '/api');
   }
+} catch(e){}
 
-  // Build a snapshot from the DOM + globals
-  function getScanSnapshot() {
-    const blockHeight = document.getElementById('blockHeight')?.textContent || "";
-    const walletsDetected = document.getElementById('wallets')?.textContent || "";
-    const scanTime = document.getElementById('scanTimer')?.textContent || "";
-
-    let elapsedMs = (window.Core && typeof window.Core.elapsedMs === 'number') ? window.Core.elapsedMs : null;
-    if ((elapsedMs === null || Number.isNaN(elapsedMs)) && scanTime) {
-      const m = String(scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-      if (m) elapsedMs = ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3])) * 1000;
-    }
-    return { blockHeight, walletsDetected, scanTime, elapsedMs };
-  }
-
-  // Save snapshot; if keepalive true, prefer sendBeacon
-  async ) {
-    try {
-      const scanData = getScanSnapshot();
-      if (opts && opts.keepalive && navigator.sendBeacon) {
-        try {
-          const payload = JSON.stringify({ token: (typeof token === 'string' ? token : ''), data: scanData });
-          const blob = new Blob([payload], { type: 'text/plain' });
-          const ok = navigator.sendBeacon(`${API_BASE}/save-scan-data-beacon`, blob);
-          if (ok) return;
-        } catch (_) {}
-      }
-      await fetch(`${API_BASE}/save-scan-data`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(scanData),
-        keepalive: !!(opts && opts.keepalive)
-      }).then(r => r.json()).then(j => {
-        try { console.log('Scan data saved successfully:', j); } catch (_) {}
-      }).catch(() => {});
-    } catch (_) {}
-  }
-
-  // Load snapshot on page open
-  document.addEventListener('DOMContentLoaded', async () => {
-    try { await waitForToken(12000); } catch (_) {}
-    try {
-      const res = await fetch(`${API_BASE}/load-scan-data`, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data) return;
-      try { console.log('Loaded scan data:', data); } catch (_) {}
-      window.__lastScanData = data;
-
-      // Block Height
-      if (data.blockHeight) {
-        const el = document.getElementById('blockHeight');
-        if (el) el.textContent = data.blockHeight;
-        const num = parseInt(String(data.blockHeight).replace(/[#,]/g, ''), 10);
-        if (!Number.isNaN(num)) {
-          window.currentHeight = num;
-        }
-      }
-
-      // Wallets Detected
-      if (data.walletsDetected) {
-        const el = document.getElementById('wallets');
-        if (el) el.textContent = data.walletsDetected;
-        const wt = parseInt(String(data.walletsDetected).replace(/,/g, ''), 10);
-        if (!Number.isNaN(wt) && window.Core) {
-          window.Core.walletsTotal = wt;
-        }
-      }
-
-      // Scan Time / elapsedMs
-      if (data.scanTime) {
-        const el = document.getElementById('scanTimer');
-        if (el) el.textContent = data.scanTime;
-      }
-      if (window.Core) {
-        if (typeof data.elapsedMs === 'number') {
-          window.Core.elapsedMs = data.elapsedMs;
-        } else if (data.scanTime) {
-          const m2 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-          if (m2) window.Core.elapsedMs = ((+m2[1])*3600 + (+m2[2])*60 + (+m2[3]))*1000;
-        }
-      }
-
-      // Late rehydrate in case other scripts reset values
-      setTimeout(() => {
-        try {
-          const d = window.__lastScanData;
-          if (!d) return;
-          // Re-apply
-          if (d.blockHeight) {
-            const el = document.getElementById('blockHeight');
-            if (el) el.textContent = d.blockHeight;
-            const num = parseInt(String(d.blockHeight).replace(/[#,]/g, ''), 10);
-            if (!Number.isNaN(num)) window.currentHeight = num;
-          }
-          if (d.walletsDetected) {
-            const el = document.getElementById('wallets');
-            if (el) el.textContent = d.walletsDetected;
-            const wt = parseInt(String(d.walletsDetected).replace(/,/g, ''), 10);
-            if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
-          }
-          if (window.Core) {
-            if (typeof d.elapsedMs === 'number') {
-              window.Core.elapsedMs = d.elapsedMs;
-            } else if (d.scanTime) {
-              const m3 = String(d.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-              if (m3) window.Core.elapsedMs = ((+m3[1])*3600 + (+m3[2])*60 + (+m3[3]))*1000;
-            }
-          }
-          if (d.scanTime) {
-            const el = document.getElementById('scanTimer');
-            if (el) el.textContent = d.scanTime;
-          }
-        } catch (_) {}
-      }, 1200);
-    } catch (e) {
-      try { console.error('load-scan-data error:', e); } catch (_) {}
-    }
-  });
-})();</script>
-<!-- PERSISTENCE PATCH: single-instance + throttled + lifecycle beacon (final) -->
-<script>
-(() => {
-  if (window.__SCAN_PERSIST_INITED__) return;
-  window.__SCAN_PERSIST_INITED__ = true;
-
-  const API_BASE =
-    (typeof window.API_BASE === "string" && window.API_BASE) ||
-    "https://web-production-13d5a.up.railway.app/api";
-
-  // always read the latest token (avoid stale closures)
-  function getToken() {
-    try {
-      if (typeof window.token === "string" && window.token.length > 0) return window.token;
-    } catch {}
-    try {
-      const t = window.localStorage.getItem("token");
-      if (t && t.length > 0) return t;
-    } catch {}
-    return "";
-  }
-
-  function waitForToken(timeoutMs = 10000) {
-    return new Promise((resolve, reject) => {
-      const start = Date.now();
-      (function check() {
-        const t = getToken();
-        if (t) return resolve(t);
-        if (Date.now() - start > timeoutMs) return reject(new Error("token-timeout"));
-        setTimeout(check, 100);
-      })();
-    });
-  }
-
-  function getScanSnapshot() {
-    const blockHeight = document.getElementById("blockHeight")?.textContent || "";
-    const walletsDetected = document.getElementById("wallets")?.textContent || "";
-    const scanTime = document.getElementById("scanTimer")?.textContent || "";
-
-    let elapsedMs =
-      window.Core && typeof window.Core.elapsedMs === "number"
-        ? window.Core.elapsedMs
-        : null;
-
-    if ((elapsedMs === null || Number.isNaN(elapsedMs)) && scanTime) {
-      const m = String(scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-      if (m) elapsedMs = ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3])) * 1000;
-    }
-
-    return { blockHeight, walletsDetected, scanTime, elapsedMs };
-  }
-
-  let isSaving = false;
-  let lastSaveTs = 0;
-  const SAVE_MIN_INTERVAL_MS = 12_000; // throttle
-  const AUTOSAVE_EVERY_MS = 15_000;    // autosave
-
-  async = {}) {
-    const now = Date.now();
-    if (!keepalive) {
-      if (now - lastSaveTs < SAVE_MIN_INTERVAL_MS) return;
-      if (isSaving) return;
-    }
-    lastSaveTs = now;
-
-    const payload = getScanSnapshot();
-    const token = getToken();
-    if (!token) return;
-
-    // Try Beacon for lifecycle saves
-    if (keepalive && navigator.sendBeacon) {
-      try {
-        const body = JSON.stringify({ token, data: payload });
-        const ok = navigator.sendBeacon(
-          `${API_BASE}/save-scan-data-beacon?token=${encodeURIComponent(token)}`,
-          new Blob([body], { type: "text/plain" })
-        );
-        if (ok) return;
-      } catch {}
-    }
-
-    // Fallback fetch
-    try {
-      isSaving = true;
-      await fetch(`${API_BASE}/save-scan-data`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload),
-        keepalive: !!keepalive
-      });
-    } catch {
-      // ignore
-    } finally {
-      isSaving = false;
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    try { await waitForToken(12_000); } catch {}
-
-    try {
-      const token = getToken();
-      if (!token) return;
-      const res = await fetch(`${API_BASE}/load-scan-data`, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      console.log("Loaded scan data:", data);
-
-      // Block Height
-      if (data.blockHeight) {
-        const el = document.getElementById("blockHeight");
-        if (el) el.textContent = data.blockHeight;
-        const num = parseInt(String(data.blockHeight).replace(/[#,]/g, ""), 10);
-        if (!Number.isNaN(num)) window.currentHeight = num;
-      }
-      // Wallets
-      if (data.walletsDetected != null) {
-        const el = document.getElementById("wallets");
-        if (el) el.textContent = String(data.walletsDetected);
-        const wt = parseInt(String(data.walletsDetected).replace(/,/g, ""), 10);
-        if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
-      }
-      // Scan Time & elapsed
-      if (data.scanTime) {
-        const el = document.getElementById("scanTimer");
-        if (el) el.textContent = data.scanTime;
-      }
-      if (window.Core) {
-        if (typeof data.elapsedMs === "number") {
-          window.Core.elapsedMs = data.elapsedMs;
-        } else if (data.scanTime) {
-          const m2 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-          if (m2) window.Core.elapsedMs = ((+m2[1])*3600 + (+m2[2])*60 + (+m2[3]))*1000;
-        }
-      }
-
-      // late rehydrate
-      setTimeout(() => {
-        try {
-          if (data.blockHeight) {
-            const el = document.getElementById("blockHeight");
-            if (el) el.textContent = data.blockHeight;
-            const num = parseInt(String(data.blockHeight).replace(/[#,]/g, ""), 10);
-            if (!Number.isNaN(num)) window.currentHeight = num;
-          }
-          if (data.walletsDetected != null) {
-            const el = document.getElementById("wallets");
-            if (el) el.textContent = String(data.walletsDetected);
-            const wt = parseInt(String(data.walletsDetected).replace(/,/g, ""), 10);
-            if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
-          }
-          if (window.Core) {
-            if (typeof data.elapsedMs === "number") {
-              window.Core.elapsedMs = data.elapsedMs;
-            } else if (data.scanTime) {
-              const m3 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-              if (m3) window.Core.elapsedMs = ((+m3[1])*3600 + (+m3[2])*60 + (+m3[3]))*1000;
-            }
-          }
-          if (data.scanTime) {
-            const el = document.getElementById("scanTimer");
-            if (el) el.textContent = data.scanTime;
-          }
-        } catch {}
-      }, 1200);
-    } catch (e) {
-      console.error("load-scan-data error:", e);
-    }
-
-    // autosave
-    if (window.__autosaveTimer) {
-      clearInterval(window.__autosaveTimer);
-      window.__autosaveTimer = null;
-    }
-    window.__autosaveTimer = setInterval(() => {
-      try { saveScanSnapshot({ reason: "interval" }); } catch {}
-    }, AUTOSAVE_EVERY_MS);
-  });
-
-  // lifecycle saves — debounced
-  let hideDebounce;
-  function onHide() {
-    clearTimeout(hideDebounce);
-    hideDebounce = setTimeout(() => saveScanSnapshot({ keepalive: true, reason: "lifecycle" }), 150);
-  }
-  });
-  })();
-</script>
-
-<!-- Dev helper: run window.__unregisterSW() once to unregister stale service worker -->
-<script>
-window.__unregisterSW = async function(){
-  if (!('serviceWorker' in navigator)) return;
-  const regs = await navigator.serviceWorker.getRegistrations();
-  for (const r of regs) { try { await r.unregister(); } catch(_){} }
-  console.debug('Service workers unregistered. Reloading...');
-  setTimeout(()=>location.reload(), 300);
+const SP_Local = {
+  save(obj){ try{ localStorage.setItem(SP_PERSIST_KEY, JSON.stringify(obj)); }catch(e){} },
+  load(){ try{ const v=localStorage.getItem(SP_PERSIST_KEY); return v?JSON.parse(v):null; }catch(e){ return null; } },
+  clear(){ try{ localStorage.removeItem(SP_PERSIST_KEY); }catch(e){} }
 };
-</script>
 
-<!-- ===== PERSISTENCE PATCH (INLINE) — put this block near the end of scan.html, just before </body> ===== -->
-<script>
-(() => {
-  if (window.__SCAN_PERSIST_INITED__) return;
-  window.__SCAN_PERSIST_INITED__ = true;
-
-  const API_BASE =
-    (typeof window.API_BASE === "string" && window.API_BASE) ||
-    "https://web-production-13d5a.up.railway.app/api";
-
-  function getToken() {
-    try { if (typeof window.token === "string" && window.token.length > 0) return window.token; } catch {}
-    try { const t = localStorage.getItem("token"); if (t && t.length > 0) return t; } catch {}
-    return "";
-  }
-  function waitForToken(timeoutMs = 10000) {
-    return new Promise((resolve, reject) => {
-      const start = Date.now();
-      (function check(){
-        const t = getToken();
-        if (t) return resolve(t);
-        if (Date.now() - start > timeoutMs) return reject(new Error("token-timeout"));
-        setTimeout(check, 100);
-      })();
+async function SP_saveServer(state){
+  if (!navigator.onLine) return false;
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  try{
+    const res = await fetch(SP_API_BASE + '/scan/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ state })
     });
-  }
+    return res.ok;
+  }catch(e){ return false; }
+}
+async function SP_loadServer(){
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try{
+    const res = await fetch(SP_API_BASE + '/scan/state', {
+      method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + token },
+      cache: 'no-store'
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    return (j && j.state) || null;
+  }catch(e){ return null; }
+}
 
-  function getScanSnapshot() {
-    const blockHeight = document.getElementById("blockHeight")?.textContent || "";
-    const walletsDetected = document.getElementById("wallets")?.textContent || "";
-    const scanTime = document.getElementById("scanTimer")?.textContent || "";
-    let elapsedMs =
-      window.Core && typeof window.Core.elapsedMs === "number"
-        ? window.Core.elapsedMs
-        : null;
-    if ((elapsedMs === null || Number.isNaN(elapsedMs)) && scanTime) {
-      const m = String(scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-      if (m) elapsedMs = ((+m[1])*3600 + (+m[2])*60 + (+m[3]))*1000;
-    }
-    return { blockHeight, walletsDetected, scanTime, elapsedMs };
-  }
+let SP_timer = null, SP_dirty=false;
+function SP_collect(){
+  const Core = window.Core || {};
+  const Fallback = window.Fallback || {};
+  const Metrics = window.Metrics || {};
+  const out = {
+    version: 4,
+    savedAt: Date.now(),
+    core: {
+      elapsedMs: Core.elapsedMs|0,
+      walletsTotal: Core.walletsTotal|0,
+      running: !!Core.running
+    },
+    fallback: {
+      enabled: !!Fallback.enabled,
+      hourStart: Fallback.hourStart|0,
+      hourTarget: Fallback.hourTarget|0,
+      hourProgress: Fallback.hourProgress|0,
+      frac: Fallback.frac|0
+    },
+    metrics: { perSec: Metrics.perSec|0 }
+  };
+  return out;
+}
 
-  let isSaving = false;
-  let lastSaveTs = 0;
-  const SAVE_MIN_INTERVAL_MS = 12_000;
-  const AUTOSAVE_EVERY_MS    = 15_000;
+async function SP_saveNow(){
+  const s = SP_collect();
+  SP_Local.save(s);
+  SP_dirty = false;
+  if (navigator.onLine) { await SP_saveServer(s); }
+}
+function SP_schedule(){ SP_dirty=true; clearTimeout(SP_timer); SP_timer=setTimeout(SP_saveNow, SP_SAVE_DEBOUNCE_MS); }
 
-  async function saveScanSnapshot({ keepalive = false, reason = "" } = {}) {
-    const now = Date.now();
-    if (!keepalive) {
-      if (now - lastSaveTs < SAVE_MIN_INTERVAL_MS) return;
-      if (isSaving) return;
-    }
-    lastSaveTs = now;
-
-    const payload = getScanSnapshot();
-    const token = getToken();
-    if (!token) return;
-
-    if (keepalive && navigator.sendBeacon) {
-      try {
-        const body = JSON.stringify({ token, data: payload });
-        const ok = navigator.sendBeacon(
-          `${API_BASE}/save-scan-data-beacon?token=${encodeURIComponent(token)}`,
-          new Blob([body], { type: "text/plain" })
-        );
-        if (ok) return;
-      } catch {}
-    }
-
-    try {
-      isSaving = true;
-      await fetch(`${API_BASE}/save-scan-data`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(payload),
-        keepalive: !!keepalive
-      });
-    } catch {} finally { isSaving = false; }
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    try { await waitForToken(12_000); } catch {}
-    try {
-      const token = getToken(); if (!token) return;
-      const res = await fetch(`${API_BASE}/load-scan-data`, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      console.log("Loaded scan data:", data);
-
-      if (data.blockHeight) {
-        const el = document.getElementById("blockHeight");
-        if (el) el.textContent = data.blockHeight;
-        const num = parseInt(String(data.blockHeight).replace(/[#,]/g,""), 10);
-        if (!Number.isNaN(num)) window.currentHeight = num;
+async function SP_restore(){
+  let state = await SP_loadServer();
+  if (!state) state = SP_Local.load();
+  if (!state) return;
+  try{
+    if (window.Core){
+      window.Core.elapsedMs = state.core?.elapsedMs|0;
+      window.Core.walletsTotal = state.core?.walletsTotal|0;
+      window.Core.running = false; // keep paused until user taps Start
+      if (window.scanTimerEl && typeof window.formatHMS==='function'){
+        window.scanTimerEl.textContent = window.formatHMS(window.Core.elapsedMs);
+        if (typeof window.fitTextId==='function') window.fitTextId(window.scanTimerEl);
       }
-      if (data.walletsDetected != null) {
-        const el = document.getElementById("wallets");
-        if (el) el.textContent = String(data.walletsDetected);
-        const wt = parseInt(String(data.walletsDetected).replace(/,/g,""), 10);
-        if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
-      }
-      if (data.scanTime) {
-        const el = document.getElementById("scanTimer");
-        if (el) el.textContent = data.scanTime;
-      }
-      if (window.Core) {
-        if (typeof data.elapsedMs === "number") {
-          window.Core.elapsedMs = data.elapsedMs;
-        } else if (data.scanTime) {
-          const m2 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-          if (m2) window.Core.elapsedMs = ((+m2[1])*3600 + (+m2[2])*60 + (+m2[3]))*1000;
-        }
-      }
-
-      setTimeout(() => {
-        try {
-          if (data.blockHeight) {
-            const el = document.getElementById("blockHeight");
-            if (el) el.textContent = data.blockHeight;
-            const num = parseInt(String(data.blockHeight).replace(/[#,]/g,""), 10);
-            if (!Number.isNaN(num)) window.currentHeight = num;
-          }
-          if (data.walletsDetected != null) {
-            const el = document.getElementById("wallets");
-            if (el) el.textContent = String(data.walletsDetected);
-            const wt = parseInt(String(data.walletsDetected).replace(/,/g,""), 10);
-            if (!Number.isNaN(wt) && window.Core) window.Core.walletsTotal = wt;
-          }
-          if (window.Core) {
-            if (typeof data.elapsedMs === "number") {
-              window.Core.elapsedMs = data.elapsedMs;
-            } else if (data.scanTime) {
-              const m3 = String(data.scanTime).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-              if (m3) window.Core.elapsedMs = ((+m3[1])*3600 + (+m3[2])*60 + (+m3[3]))*1000;
-            }
-          }
-          if (data.scanTime) {
-            const el = document.getElementById("scanTimer");
-            if (el) el.textContent = data.scanTime;
-          }
-        } catch {}
-      }, 1200);
-    } catch (e) {
-      console.error("load-scan-data error:", e);
+      if (typeof window.updateKPIs === 'function') { try { window.updateKPIs(); } catch(_){} }
     }
-
-    if (window.__autosaveTimer) {
-      clearInterval(window.__autosaveTimer);
-      window.__autosaveTimer = null;
+    if (window.Fallback){
+      window.Fallback.enabled = !!(state.fallback?.enabled);
+      window.Fallback.hourStart = state.fallback?.hourStart|0;
+      window.Fallback.hourTarget = state.fallback?.hourTarget|0;
+      window.Fallback.hourProgress = state.fallback?.hourProgress|0;
+      window.Fallback.frac = state.fallback?.frac|0;
     }
-    window.__autosaveTimer = setInterval(() => {
-      try { saveScanSnapshot({ reason: "interval" }); } catch {}
-    }, AUTOSAVE_EVERY_MS);
-  });
+    if (window.showToast) window.showToast('Restored scan state');
+  }catch(e){ console.warn('restore failed', e); }
+}
 
-  let hideDebounce;
-  function onHide() {
-    clearTimeout(hideDebounce);
-    hideDebounce = setTimeout(() => {
-      saveScanSnapshot({ keepalive: true, reason: "lifecycle" });
-    }, 150);
+window.markProgressChanged = SP_schedule;
+
+// Try to hook common events to auto-mark changes
+(function autoHook(){
+  if (window.Fallback && typeof window.Fallback.step === 'function'){
+    const _orig = window.Fallback.step.bind(window.Fallback);
+    window.Fallback.step = function(...args){
+      const beforeTotal = (window.Core && window.Core.walletsTotal) | 0;
+      const r = _orig(...args);
+      const afterTotal = (window.Core && window.Core.walletsTotal) | 0;
+      if (afterTotal !== beforeTotal) SP_schedule();
+      return r;
+    };
   }
-  document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
-  window.addEventListener("pagehide", onHide);
-  window.addEventListener("freeze", onHide);
-  window.addEventListener("beforeunload", onHide);
+  if (typeof window.setRunning === 'function'){
+    const _sr = window.setRunning;
+    window.setRunning = function(run){ try{ _sr(run); } finally{ SP_schedule(); } };
+  }
+  if (!window.__SP_workerHook){
+    window.__SP_workerHook = true;
+    window.addEventListener('message', (e) => {
+      if (e && e.data && (e.data.total!=null || e.data.elapsed!=null)) {
+        SP_schedule();
+      }
+    }, true);
+  }
 })();
-</script>
-<!-- ===== END PERSISTENCE PATCH ===== -->
 
+setInterval(() => { if (SP_dirty) SP_saveNow(); }, SP_FLUSH_MS);
+
+window.addEventListener('beforeunload', () => {
+  try{
+    const s = SP_collect();
+    SP_Local.save(s);
+    const token = localStorage.getItem('token');
+    if (navigator.sendBeacon && token){
+      const url = SP_API_BASE + '/scan/state';
+      const payload = JSON.stringify({ state: s });
+      navigator.sendBeacon(url, payload);
+    }
+  }catch(e){}
+});
+
+document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
+
+</script>
 </body>
 </html>
