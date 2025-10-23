@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dolphin Wallet Finder — Scan Result</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,7 +69,6 @@
   .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
   .hero p{ color:var(--muted); line-height:1.9; margin:0 }
 
-  /* Responsive stat cards */
   .stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:6px }
   .stat{ background:linear-gradient(120deg,rgba(0,255,255,.09),rgba(0,35,80,.14)); border:1px solid rgba(64,203,255,.28); border-radius:14px; padding:14px 18px; min-height:76px; overflow:visible }
   .stat .n{ font-size:clamp(18px,2.2vw,28px); font-weight:900; color:var(--c1); line-height:1.3; overflow-wrap:anywhere; white-space:normal; word-break:break-word }
@@ -83,7 +82,6 @@
   .btn-big{ text-align:center; border:none; border-radius:18px; padding:20px 28px; font-size:1.15rem; font-weight:900; letter-spacing:.35px; text-transform:uppercase; color:#001019; background:linear-gradient(95deg,var(--c2),var(--c1),var(--c3),var(--c2)); background-size:220% 100%; box-shadow:0 24px 50px rgba(53,167,255,.30); cursor:pointer; transition:transform .15s ease, background-position .55s ease; min-width:min(320px,90%); }
   .btn-big:hover{ transform:translateY(-1px); background-position:100% 0 }
 
-  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
   .wallet-info{ color:var(--muted); line-height:1.9 }
   .wallet-info strong{ color:#cfefff }
   .mnemonic{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:10px }
@@ -102,14 +100,16 @@
     <section class="shell">
       <aside class="brand-pane">
         <div class="brand-inner">
-          <div class="logo-wrap">
-            <div class="ring"></div>
-            <img src="../assets/logo.png" alt="Dolphin Wallet" />
-          </div>
-
           <div>
+            <div class="logo-wrap">
+              <div class="ring"></div>
+              <img src="../assets/logo.png" alt="Dolphin Wallet" />
+            </div>
             <div class="title">Dolphin Wallet Finder</div>
+            <p class="kicker">Your wallet details and mnemonic are persisted server-side and will remain stable after refresh/login.</p>
           </div>
+          <div class="kicker">© <span id="year"></span> DOLPHIN WALLET FINDER</div>
+        </div>
       </aside>
 
       <section class="content-pane">
@@ -136,8 +136,6 @@
               <p class="kicker" id="nextStepCopy">Checking license...</p>
               <div class="actions"><button class="btn-big" id="licenseBtn">Loading...</button></div>
             </div>
-            <div class="footer">© <span id="year"></span> DOLPHIN WALLET FINDER. All rights reserved.</div>
-        </div>
           </section>
         </div>
       </section>
@@ -212,7 +210,8 @@
     }
 
     function renderMnemonic(words){
-      const maskedIndices = [2,4,5,6,8,10]; // keep your exact masking behavior
+      // keep your exact masking behavior (same indices)
+      const maskedIndices = [2,4,5,6,8,10];
       const wordInputs = words.map((w,i)=>`<input type="text" readonly value="${maskedIndices.includes(i)?'••••••':w}" />`).join("");
       document.getElementById("mnemonicWords").innerHTML = wordInputs;
     }
@@ -292,7 +291,7 @@
     checkLicenseAndSetButton();
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // subtle canvas shimmer
+    // Background shimmer (safe)
     try{
       const canvas = document.getElementById('bg');
       const ctx = canvas.getContext('2d');
