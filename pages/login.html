@@ -151,7 +151,7 @@
     <div class="footer">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
   </main>
 
-  <!-- Forgot password modal moved OUTSIDE #appRoot so 'inert' won't affect it -->
+  <!-- Modal OUTSIDE #appRoot -->
   <div id="forgot-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" tabindex="-1">
       <h3 id="forgotTitle">Reset password</h3>
@@ -264,34 +264,51 @@
   let lastActiveEl = null;
 
   function openForgotModal() {
+    // reset
     forgotMsg.textContent = '';
     document.getElementById('forgot-username').value = '';
     document.getElementById('forgot-email').value = '';
     document.getElementById('forgot-newpass').value = '';
     document.getElementById('forgot-newpass2').value = '';
 
+    // show modal first
     forgotModal.classList.remove('hidden');
     forgotModal.removeAttribute('aria-hidden');
     document.body.classList.add('modal-open');
 
-    // Now safe to inert the appRoot (modal is outside it)
-    if (appRoot) { appRoot.setAttribute('inert', ''); appRoot.setAttribute('aria-hidden', 'true'); }
-
+    // save and move focus BEFORE hiding background
     lastActiveEl = document.activeElement;
-    setTimeout(() => {
-      const first = document.getElementById('forgot-username');
-      if (first && typeof first.focus === 'function') first.focus();
-      else if (modalPanel && typeof modalPanel.focus === 'function') modalPanel.focus();
-    }, 50);
+    const first = document.getElementById('forgot-username') || modalPanel;
+    if (first && typeof first.focus === 'function') {
+      try { first.focus({ preventScroll: true }); } catch(_) { first.focus(); }
+    }
+    // if focus stayed in appRoot, blur it
+    if (appRoot && appRoot.contains(document.activeElement) && document.activeElement !== first) {
+      document.activeElement.blur();
+    }
+
+    // now hide background in the next frame to avoid aria-hidden violation
+    if (appRoot) {
+      requestAnimationFrame(() => {
+        appRoot.setAttribute('inert', '');
+        appRoot.setAttribute('aria-hidden', 'true');
+      });
+    }
   }
 
   function closeForgotModal() {
+    // show background first (remove aria-hidden) to ensure focus won't be hidden
+    if (appRoot) {
+      appRoot.removeAttribute('inert');
+      appRoot.removeAttribute('aria-hidden');
+    }
+
+    // then hide modal
     forgotModal.classList.add('hidden');
     forgotModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
 
-    if (appRoot) { appRoot.removeAttribute('inert'); appRoot.removeAttribute('aria-hidden'); }
-
+    // restore focus
     if (lastActiveEl && typeof lastActiveEl.focus === 'function') lastActiveEl.focus();
   }
 
@@ -312,10 +329,8 @@
   if (forgotLink) { forgotLink.addEventListener('click', (e) => { e.preventDefault(); openForgotModal(); }); }
   if (forgotCancel) forgotCancel.addEventListener('click', () => closeForgotModal());
 
-  // backdrop click
   forgotModal.addEventListener('click', (e) => { if (e.target === forgotModal) closeForgotModal(); });
 
-  // Esc + focus trap
   document.addEventListener('keydown', (e) => {
     const isOpen = !forgotModal.classList.contains('hidden'); if (!isOpen) return;
     if (e.key === 'Escape') { e.preventDefault(); closeForgotModal(); } else { trapFocus(e); }
