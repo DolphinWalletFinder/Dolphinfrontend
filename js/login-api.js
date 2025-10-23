@@ -4,7 +4,6 @@ const API_BASE_URL = "https://web-production-13d5a.up.railway.app/api";
 
 const USERNAME_RE = /^[A-Za-z0-9]+$/;
 const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-// ایمیل ساده و معتبر (ASCII)؛ TLD حداقل 2 حرف
 const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 /** Normalize & sanitize email to avoid hidden RTL/zero-width etc. */
