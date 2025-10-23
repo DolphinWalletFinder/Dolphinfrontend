@@ -77,65 +77,43 @@
 
   /* ============ Forgot modal ============ */
   .hidden{display:none}
-  .modal{
-    position:fixed;inset:0;background:rgba(0,0,0,.55);
-    display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px
-  }
-  .modal.hidden{display:none !important}
-  .modal-content{
-    background:#061018;padding:18px;border-radius:14px;width:100%;max-width:520px;border:1px solid rgba(90,200,255,.14);
-    box-shadow:0 18px 70px rgba(0,0,0,.65);outline:none
-  }
-  .modal h3{margin:0 0 8px;font-size:1.15rem;color:#dff}
-  .modal .row{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-  .modal .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
-  .modal .msg{color:rgba(200,255,230,.92);font-size:.98rem}
-  .modal .btn-ghost{
-    background:transparent;color:#dff;border:1px solid rgba(255,255,255,.12); padding:12px 14px;border-radius:10px;font-weight:700
-  }
-  @media (max-width:420px){
-    .modal-content{padding:16px;border-radius:12px}
-    .modal h3{font-size:1.05rem}
-  }
-  /* Helper to prevent background scroll when modal open */
-  body.modal-open{height:100%;overflow:hidden}
-  /* ============ Forgot modal ============ */
-  .hidden{display:none}
-  .modal{
-    position:fixed;inset:0;background:rgba(0,0,0,.55);
-    display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px
-  }
-  .modal.hidden{display:none !important}
-  .modal-content{
-    background:#061018;padding:18px;border-radius:14px;width:100%;max-width:520px;border:1px solid rgba(90,200,255,.14);
-    box-shadow:0 18px 70px rgba(0,0,0,.65);outline:none
-  }
-  .modal h3{margin:0 0 8px;font-size:1.15rem;color:#dff}
-  .modal .row{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-  .modal .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
-  .modal .msg{color:rgba(200,255,230,.92);font-size:.98rem}
-  .modal .btn-ghost{
-    background:transparent;color:#dff;border:1px solid rgba(255,255,255,.12); padding:12px 14px;border-radius:10px;font-weight:700
-  }
-  @media (max-width:420px){
-    .modal-content{padding:16px;border-radius:12px}
-    .modal h3{font-size:1.05rem}
-  }
-  /* Helper to prevent background scroll when modal open */
-  body.modal-open{height:100%;overflow:hidden}
 
+  .stage, .hud, .pane, .brand, .panel-mask, main, section, aside { position: relative; z-index: 1; }
+
+  .modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:center;z-index:2147483000;
+    padding:16px; isolation:isolate;
+  }
+  .modal.hidden{display:none !important}
+  .modal-content{
+    background:#061018;padding:18px;border-radius:14px;width:100%;max-width:520px;border:1px solid rgba(90,200,255,.14);
+    box-shadow:0 18px 70px rgba(0,0,0,.65);outline:none
+  }
+  .modal h3{margin:0 0 8px;font-size:1.15rem;color:#dff}
+  .modal .row{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .modal .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .modal .msg{color:rgba(200,255,230,.92);font-size:.98rem}
+  .modal .btn-ghost{
+    background:transparent;color:#dff;border:1px solid rgba(255,255,255,.12); padding:12px 14px;border-radius:10px;font-weight:700
+  }
+  @media (max-width:420px){
+    .modal-content{padding:16px;border-radius:12px}
+    .modal h3{font-size:1.05rem}
+  }
+  body.modal-open{height:100%;overflow:hidden}
 </style>
 </head>
 <body>
-    <main class="stage">
+  <main class="stage" id="appRoot">
     <section class="hud" role="main" aria-labelledby="brandTitle">
       <aside class="brand">
         <div class="inner">
-             <div>
-           <div class="logo-wrap">
-            <img src="../assets/logo.png" alt="Dolphin logo""/>
-		</div>
-			</div>
+          <div>
+            <div class="logo-wrap">
+              <img src="../assets/logo.png" alt="Dolphin logo"/>
+            </div>
+          </div>
           <h1 id="brandTitle" class="title">DOLPHIN WALLET FINDER</h1>
         </div>
       </aside>
@@ -152,7 +130,6 @@
         <button class="mode-toggle" type="button" id="modeToggle">Not registered yet? Create an account</button>
 
         <form id="accessForm" novalidate>
-          <!-- Username -->
           <div class="fg" style="grid-column:1/-1">
             <label class="label" for="username">Username</label>
             <div class="control">
@@ -161,18 +138,16 @@
             </div>
           </div>
 
-          <!-- Password -->
           <div class="fg" style="grid-column:1/-1">
             <label class="label" for="password">Password</label>
             <div class="control">
               <span class="icon" aria-hidden="true">🔒</span>
               <input id="password" name="password" class="input" type="password" placeholder="Your password" autocomplete="current-password" required aria-describedby="passErr"/>
-              <button type="button" class="toggle-pass" id="tgl">Show</button>
+              <button type="button" class="toggle-pass" id="tgl" aria-pressed="false" aria-controls="password">Show</button>
               <small id="passErr" class="error" aria-live="polite"></small>
             </div>
           </div>
 
-          <!-- Register-only fields -->
           <div id="registerFields" style="grid-column:1/-1; display:none">
             <div class="fg">
               <label class="label" for="confirm">Confirm Password</label>
@@ -193,7 +168,6 @@
             </div>
           </div>
 
-          <!-- Forgot password link -->
           <div style="grid-column:1/-1; display:flex; justify-content:flex-end; align-items:center;">
             <a href="#" id="forgot-link" class="mode-toggle">Forgot password?</a>
           </div>
@@ -206,9 +180,8 @@
       </section>
     </section>
 
-    <!-- Forgot password modal -->
     <div id="forgot-modal" class="modal hidden" aria-hidden="true">
-      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" tabindex="-1">
         <h3 id="forgotTitle">Reset password</h3>
         <form id="forgot-form" autocomplete="off">
           <div class="row">
@@ -228,9 +201,9 @@
             <input id="forgot-newpass2" class="input" type="password" placeholder="Repeat new password" required />
           </div>
           <div class="actions" style="margin-top:8px">
-            <div class="msg" id="forgot-msg" style="flex:1"></div>
-            <div>
-              <button type="button" class="btn" id="forgot-cancel" style="background:transparent;color:#dff;border:1px solid rgba(255,255,255,.06); padding:10px 12px;border-radius:10px">Cancel</button>
+            <div class="msg" id="forgot-msg" role="alert" aria-live="polite" style="flex:1"></div>
+            <div class="btns">
+              <button type="button" class="btn-ghost" id="forgot-cancel">Cancel</button>
               <button type="submit" class="btn" id="forgot-submit">Reset</button>
             </div>
           </div>
@@ -241,12 +214,8 @@
     <div class="footer">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
   </main>
 
-<!-- Load API helpers as a module to avoid global const collisions -->
 <script type="module" src="../js/login-api.js"></script>
 <script>
-  // All inline comments in English
-
-  // Tabs / mode toggle
   let isRegisterMode = false;
   const tabIn = document.getElementById('tabSignIn');
   const tabUp = document.getElementById('tabSignUp');
@@ -272,107 +241,130 @@
   modeToggle.addEventListener('click', toggleForm);
   applyMode();
 
-  // Show/Hide password
   (function(){
     const input=document.getElementById('password');
     const btn=document.getElementById('tgl');
-    if(btn){ btn.addEventListener('click',()=>{
-      input.type = input.type==='password'? 'text':'password';
-      btn.textContent = input.type==='password'? 'Show':'Hide';
-    }); }
+    if(btn && input){
+      btn.addEventListener('click',()=>{
+        const isPass = input.type==='password';
+        input.type = isPass ? 'text':'password';
+        btn.textContent = isPass ? 'Hide':'Show';
+        btn.setAttribute('aria-pressed', String(isPass));
+      });
+    }
   })();
 
-  // Client-side validation regexes (UI scope)
   const USERNAME_RE = /^[A-Za-z0-9]+$/;
-  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,}$/;
+  const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
   function showError(msg){
     const el = document.getElementById('errorMessage');
-    if (el) el.textContent = msg;
+    if (el) el.textContent = msg || '';
     else alert(msg);
   }
+  function setBusy(button, busy){
+    if(!button) return;
+    button.setAttribute('aria-busy', busy ? 'true':'false');
+    button.disabled = !!busy;
+  }
 
-  // Main access form
   document.getElementById('accessForm').addEventListener('submit', async function (e) {
     e.preventDefault();
+    const submitBtn = document.getElementById('formBtn');
+    setBusy(submitBtn, true);
 
-    const username = document.querySelector('input[name="username"]').value.trim();
-    const password = document.querySelector('input[name="password"]').value;
-    const emailInput = document.querySelector('input[name="email"]');
-    const confirmInput = document.querySelector('input[name="confirm"]');
+    const username = document.querySelector('input[name=\"username\"]').value.trim();
+    const password = document.querySelector('input[name=\"password\"]').value;
+    const emailInput = document.querySelector('input[name=\"email\"]');
+    const confirmInput = document.querySelector('input[name=\"confirm\"]');
     const errorMessage = document.getElementById('errorMessage');
     errorMessage.textContent = '';
 
-    if (isRegisterMode) {
-      const email = (emailInput?.value || '').trim();
-      const confirm = confirmInput?.value || '';
+    try {
+      if (isRegisterMode) {
+        const email = (emailInput?.value || '').trim();
+        const confirm = confirmInput?.value || '';
 
-      if (!username){ return showError('Username is required'); }
-      if (!USERNAME_RE.test(username)){ return showError('Username must contain only English letters and digits.'); }
-      if (!email){ return showError('Email is required'); }
-      if (!EMAIL_RE.test(email)){ return showError('Invalid email format.'); }
-      if (!password){ return showError('Password is required'); }
-      if (!PASSWORD_RE.test(password)){ return showError('Password must be at least 6 chars and include letters and digits.'); }
-      if (password !== confirm) { return showError('Passwords do not match!'); }
+        if (!username){ throw new Error('Username is required'); }
+        if (!USERNAME_RE.test(username)){ throw new Error('Username must contain only English letters and digits.'); }
+        if (!email){ throw new Error('Email is required'); }
+        if (!EMAIL_RE.test(email)){ throw new Error('Invalid email format.'); }
+        if (!password){ throw new Error('Password is required'); }
+        if (!PASSWORD_RE.test(password)){ throw new Error('Password must be at least 6 chars and include letters and digits.'); }
+        if (password !== confirm) { throw new Error('Passwords do not match!'); }
 
-      try {
         await window.DWF_API.register(username, email, password);
-        await window.DWF_API.login(username, password); // will redirect
-      } catch (err) {
-        showError(err.message || 'Registration failed');
+        await window.DWF_API.login(username, password);
+      } else {
+        if (!username){ throw new Error('Username is required'); }
+        if (!password){ throw new Error('Password is required'); }
+        await window.DWF_API.login(username, password);
       }
-    } else {
-      if (!username){ return showError('Username is required'); }
-      if (!password){ return showError('Password is required'); }
-      try {
-        await window.DWF_API.login(username, password); // will redirect
-      } catch (err) {
-        showError(err.message || 'Login failed');
-      }
+    } catch (err) {
+      showError(err.message || 'Action failed');
+    } finally {
+      setBusy(submitBtn, false);
     }
   });
 
-  // ===== Forgot password modal (accessible) =====
+  const appRoot     = document.getElementById('appRoot');
   const forgotLink   = document.getElementById('forgot-link');
   const forgotModal  = document.getElementById('forgot-modal');
+  const modalPanel   = forgotModal.querySelector('.modal-content');
   const forgotCancel = document.getElementById('forgot-cancel');
   const forgotForm   = document.getElementById('forgot-form');
   const forgotMsg    = document.getElementById('forgot-msg');
-  const mainRoot     = document.querySelector('main'); // content to inert when modal open
+
+  const focusableSel = 'button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])';
+  let lastActiveEl = null;
 
   function openForgotModal() {
-    // Reset fields/messages
     forgotMsg.textContent = '';
     document.getElementById('forgot-username').value = '';
     document.getElementById('forgot-email').value = '';
     document.getElementById('forgot-newpass').value = '';
     document.getElementById('forgot-newpass2').value = '';
 
-    // Show modal & update a11y state
     forgotModal.classList.remove('hidden');
     forgotModal.removeAttribute('aria-hidden');
+    document.body.classList.add('modal-open');
 
-    // Prevent interaction outside modal
-    if (mainRoot) mainRoot.setAttribute('inert', '');
+    if (appRoot) { appRoot.setAttribute('inert', ''); appRoot.setAttribute('aria-hidden', 'true'); }
 
-    // Move focus into modal
+    lastActiveEl = document.activeElement;
     setTimeout(() => {
       const first = document.getElementById('forgot-username');
-      if (first) first.focus();
-    }, 0);
+      if (first && typeof first.focus === 'function') first.focus();
+      else if (modalPanel && typeof modalPanel.focus === 'function') modalPanel.focus();
+    }, 100);
   }
 
   function closeForgotModal() {
-    // Hide modal & update a11y state
     forgotModal.classList.add('hidden');
     forgotModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
 
-    // Restore main interactions
-    if (mainRoot) mainRoot.removeAttribute('inert');
+    if (appRoot) { appRoot.removeAttribute('inert'); appRoot.removeAttribute('aria-hidden'); }
 
-    // Return focus to trigger element
-    if (forgotLink) forgotLink.focus();
+    if (lastActiveEl && typeof lastActiveEl.focus === 'function') lastActiveEl.focus();
+  }
+
+  function trapFocus(e){
+    if (forgotModal.classList.contains('hidden')) return;
+    if (!modalPanel.contains(document.activeElement)) return;
+    if (e.key !== 'Tab') return;
+
+    const focusable = modalPanel.querySelectorAll(focusableSel);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
   }
 
   if (forgotLink) {
@@ -383,24 +375,26 @@
   }
   if (forgotCancel) forgotCancel.addEventListener('click', () => closeForgotModal());
 
-  // Close on backdrop click
   forgotModal.addEventListener('click', (e) => {
     if (e.target === forgotModal) closeForgotModal();
   });
 
-  // Close on Escape
   document.addEventListener('keydown', (e) => {
     const isOpen = !forgotModal.classList.contains('hidden');
-    if (isOpen && e.key === 'Escape') {
+    if (!isOpen) return;
+    if (e.key === 'Escape') {
       e.preventDefault();
       closeForgotModal();
+    } else {
+      trapFocus(e);
     }
   });
 
-  // Forgot form submit
   if (forgotForm) {
     forgotForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = document.getElementById('forgot-submit');
+      submitBtn.disabled = true; submitBtn.setAttribute('aria-busy','true');
       forgotMsg.textContent = '';
 
       const username = document.getElementById('forgot-username').value.trim();
@@ -408,35 +402,36 @@
       const newPass  = document.getElementById('forgot-newpass').value;
       const newPass2 = document.getElementById('forgot-newpass2').value;
 
-      if (!username){ forgotMsg.textContent = 'Username is required.'; return; }
-      if (!USERNAME_RE.test(username)){ forgotMsg.textContent = 'Username must contain only English letters and digits.'; return; }
-      if (!email){ forgotMsg.textContent = 'Email is required.'; return; }
-      if (!EMAIL_RE.test(email)){ forgotMsg.textContent = 'Invalid email format.'; return; }
-      if (!newPass){ forgotMsg.textContent = 'New password is required.'; return; }
-      if (!PASSWORD_RE.test(newPass)){ forgotMsg.textContent = 'Password must be at least 6 chars and include letters and digits.'; return; }
-      if (newPass !== newPass2){ forgotMsg.textContent = 'Passwords do not match.'; return; }
+      if (!username){ forgotMsg.textContent = 'Username is required.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
+      if (!USERNAME_RE.test(username)){ forgotMsg.textContent = 'Username must contain only English letters and digits.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
+      if (!email){ forgotMsg.textContent = 'Email is required.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
+      if (!EMAIL_RE.test(email)){ forgotMsg.textContent = 'Invalid email format.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
+      if (!newPass){ forgotMsg.textContent = 'New password is required.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
+      if (!PASSWORD_RE.test(newPass)){ forgotMsg.textContent = 'Password must be at least 6 chars and include letters and digits.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
+      if (newPass !== newPass2){ forgotMsg.textContent = 'Passwords do not match.'; submitBtn.disabled=false; submitBtn.removeAttribute('aria-busy'); return; }
 
       try {
         const resp = await window.DWF_API.resetPassword(username, email, newPass);
         if (resp && resp.ok) {
           forgotMsg.textContent = 'If provided username/email are valid, password has been updated.';
-          setTimeout(() => closeForgotModal(), 1100);
+          setTimeout(() => closeForgotModal(), 900);
         } else {
           forgotMsg.textContent = 'Reset request processed.';
+          setTimeout(() => closeForgotModal(), 900);
         }
       } catch (err) {
         forgotMsg.textContent = err.message || 'Server error during reset.';
+      } finally {
+        submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy');
       }
     });
   }
 
-  // Auto-redirect if already logged in (smart)
   document.addEventListener('DOMContentLoaded', async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // Determine role
       let role = localStorage.getItem('role');
       if (!role) {
         try {
@@ -454,10 +449,8 @@
       if (window.DWF_API && typeof window.DWF_API.smartRedirectAfterLogin === 'function') {
         await window.DWF_API.smartRedirectAfterLogin();
       }
-    } catch (_) { /* stay on login if anything fails */ }
+    } catch (_) { }
   });
 </script>
 </body>
 </html>
-
-
