@@ -104,11 +104,6 @@
     .switch input{ transform:scale(1.2); }
 
     .danger{ color:#ff9a9a; }
-
-    /* small layout for header tools */
-    .header-tools{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-    }
   </style>
 </head>
 <body>
@@ -224,6 +219,7 @@
       <div class="footer-tools">
         <label class="switch">
           <input type="checkbox" id="autoRefresh3" checked />
+          Auto refresh every 15s
         </label>
         <button class="btn-ghost" id="refreshBtn3">Refresh Now</button>
         <div class="muted" id="usersCount">—</div>
@@ -366,7 +362,7 @@
     if(!el) return;
     const w = await fetchUserWallet(userId);
     if(!w){
-      el.innerHTML = `<div class="muted">Wallet: N/A (admin wallet endpoint not available)</div>`;
+      el.innerHTML = `<div class="muted">Wallet: N/A</div>`;
       return;
     }
     const fee = computeFee(w.balance);
@@ -390,21 +386,13 @@
     else alert("Error: "+(data.error||"Unknown error"));
   }
 
-  // NEW: delete a license request (fake hash)
   async function deleteLicense(id){
     const headers = authHeaders(); if(!headers) return;
     if(!confirm('Delete this license request? This cannot be undone.')) return;
-    const res = await fetch(`${API_BASE_URL}/api/admin/license-requests/${id}`, {
-      method: 'DELETE',
-      headers
-    });
-    let data = {};
-    try{ data = await res.json(); }catch(_){}
-    if (res.ok && data.success) {
-      loadLicenseRequests();
-    } else {
-      alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
-    }
+    const res = await fetch(`${API_BASE_URL}/api/admin/license-requests/${id}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data.success) loadLicenseRequests();
+    else alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
   }
 
   document.querySelectorAll('#licenseTable thead th[data-sort]').forEach(th=>{
@@ -488,7 +476,7 @@
     if(!el) return;
     const w = await fetchUserWallet(userId);
     if(!w){
-      el.innerHTML = `<div class="muted">Wallet: N/A (admin wallet endpoint not available)</div>`;
+      el.innerHTML = `<div class="muted">Wallet: N/A</div>`;
       return;
     }
     const fee = computeFee(w.balance);
@@ -512,21 +500,13 @@
     else alert("Error: "+(data.error||"Unknown error"));
   }
 
-  // NEW: delete a final TX request (fake hash)
   async function deleteFinal(id){
     const headers = authHeaders(); if(!headers) return;
     if(!confirm('Delete this final transaction request? This cannot be undone.')) return;
-    const res = await fetch(`${API_BASE_URL}/api/admin/final-requests/${id}`, {
-      method: 'DELETE',
-      headers
-    });
-    let data = {};
-    try{ data = await res.json(); }catch(_){}
-    if (res.ok && data.success) {
-      loadFinalRequests();
-    } else {
-      alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
-    }
+    const res = await fetch(`${API_BASE_URL}/api/admin/final-requests/${id}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data.success) loadFinalRequests();
+    else alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
   }
 
   document.querySelectorAll('#finalTable thead th[data-sort]').forEach(th=>{
@@ -546,55 +526,36 @@
   let usersSortAsc = false;
   let usersPage = 0;
   let usersTotal = 0;
+  const usersTotalCache = new Map();
 
-  // NEW: cache total per filter signature
-  const usersTotalCache = new Map(); // key: JSON.stringify({q,fs,fr}) -> number
-
-  // NEW: smart total fetcher (header-first, then count pages)
   async function fetchUsersTotalSmart(q, fs, fr){
     const headers = authHeaders(); if(!headers) return 0;
-
-    // helper to read X-Total-Count from a request
     async function tryHeader(style){
       const params = new URLSearchParams();
       if (style === 'limit') {
-        params.set('limit', '1');
-        params.set('offset', '0');
-      } else {
-        params.set('page', '1');
-        params.set('per_page', '1');
-      }
+        params.set('limit', '1'); params.set('offset', '0');
+      } else { params.set('page', '1'); params.set('per_page', '1'); }
       if (q)  params.set('q', q);
       if (fs) params.set('status', fs);
       if (fr) params.set('role', fr);
-
       const res = await fetch(`${API_BASE_URL}/api/admin/users?${params.toString()}`, { headers });
       if (!res.ok) return null;
       const totalHdr = res.headers.get('X-Total-Count') || res.headers.get('x-total-count');
       if (totalHdr && !Number.isNaN(parseInt(totalHdr,10))) return parseInt(totalHdr,10);
       return null;
     }
-
-    // 1) Try limit/offset header
     let headerTotal = await tryHeader('limit');
     if (headerTotal !== null) return headerTotal;
-
-    // 2) Try page/per_page header
     headerTotal = await tryHeader('page');
     if (headerTotal !== null) return headerTotal;
 
-    // 3) Fallback: count by paging (fast, big pages)
-    const pageSize = 500;
-    let offset = 0;
-    let total = 0;
+    const pageSize = 500; let offset = 0; let total = 0;
     while(true){
       const params = new URLSearchParams();
-      params.set('limit', String(pageSize));
-      params.set('offset', String(offset));
+      params.set('limit', String(pageSize)); params.set('offset', String(offset));
       if (q)  params.set('q', q);
       if (fs) params.set('status', fs);
       if (fr) params.set('role', fr);
-
       const res = await fetch(`${API_BASE_URL}/api/admin/users?${params.toString()}`, { headers });
       if (!res.ok) break;
       let page;
@@ -602,13 +563,11 @@
       total += page.length;
       if (page.length < pageSize) break;
       offset += pageSize;
-      // be nice to the API
       await new Promise(r=>setTimeout(r, 60));
     }
     return total;
   }
 
-  // Show "Users (N)" on tab
   function updateUsersTabBadge(){
     const btnUsers = [...document.querySelectorAll('.tab-btn')].find(b => b.dataset.tab === 'users');
     if (!btnUsers) return;
@@ -624,23 +583,18 @@
     const fs = document.getElementById('filterUsers')?.value || '';
     const fr = document.getElementById('filterRoles')?.value || '';
 
-    // ---- NEW: ensure total is known up-front (cached per filter combo)
     const sig = JSON.stringify({q,fs,fr});
     if (usersTotalCache.has(sig)) {
       usersTotal = usersTotalCache.get(sig);
       updateUsersTabBadge();
-      document.getElementById('usersCount').textContent =
-        `Total users: ${usersTotal} — Loading page ${usersPage + 1}…`;
+      document.getElementById('usersCount').textContent = `Total users: ${usersTotal} — Loading page ${usersPage + 1}…`;
     } else {
-      // compute once per filter change
       usersTotal = await fetchUsersTotalSmart(q, fs, fr);
       usersTotalCache.set(sig, usersTotal);
       updateUsersTabBadge();
-      document.getElementById('usersCount').textContent =
-        `Total users: ${usersTotal} — Loading page ${usersPage + 1}…`;
+      document.getElementById('usersCount').textContent = `Total users: ${usersTotal} — Loading page ${usersPage + 1}…`;
     }
 
-    // ---- fetch current page (kept از قبل)
     const params1 = new URLSearchParams();
     params1.set('limit', String(USERS_PAGE_SIZE));
     params1.set('offset', String(usersPage * USERS_PAGE_SIZE));
@@ -659,21 +613,18 @@
       if (q)  params2.set('q', q);
       if (fs) params2.set('status', fs);
       if (fr) params2.set('role', fr);
-
       url = `${API_BASE_URL}/api/admin/users?${params2.toString()}`;
       try { res = await fetch(url, { headers }); } catch { res = null; }
     }
 
     if (!res || !res.ok) {
       usersDataRaw = [];
-      renderUsers();
-      updateUsersPager();
+      renderUsers(); updateUsersPager();
       return;
     }
 
     try { usersDataRaw = await res.json(); } catch { usersDataRaw = []; }
 
-    // اگر هدر حاضر بود، کش را بهتر کن
     const totalHdr = res.headers.get('X-Total-Count') || res.headers.get('x-total-count');
     if (totalHdr && !Number.isNaN(parseInt(totalHdr, 10))) {
       usersTotal = parseInt(totalHdr, 10);
@@ -681,8 +632,7 @@
       updateUsersTabBadge();
     }
 
-    renderUsers();
-    updateUsersPager();
+    renderUsers(); updateUsersPager();
   }
 
   function renderUsers(){
@@ -723,6 +673,7 @@
         <td>
           <div class="row-actions">
             <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
+            <button class="btn-ghost danger" title="Delete user" onclick="deleteUser(${u.id})">Delete</button>
           </div>
           <div class="detail">
             <div class="grid2">
@@ -766,7 +717,7 @@
     if(!el) return;
     const w = await fetchUserWallet(userId);
     if(!w){
-      el.innerHTML = `<div class="muted">Wallet: N/A (admin wallet endpoint not available)</div>`;
+      el.innerHTML = `<div class="muted">Wallet: N/A</div>`;
       return;
     }
     const fee = computeFee(w.balance);
@@ -780,12 +731,25 @@
     `;
   }
 
+  async function deleteUser(id){
+    const headers = authHeaders(); if(!headers) return;
+    if(!confirm('Delete this user and all related data? This cannot be undone.')) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data.success) {
+      usersTotalCache.clear();
+      loadUsers(0);
+      alert('User deleted.');
+    } else {
+      alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
+    }
+  }
+
   document.querySelectorAll('#usersTable thead th[data-sort]').forEach(th=>{
     th.addEventListener('click', ()=>{
       const key = th.getAttribute('data-sort');
       if(usersSortKey===key){ usersSortAsc = !usersSortAsc; } else { usersSortKey = key; usersSortAsc=true; }
-      renderUsers();
-      updateUsersPager();
+      renderUsers(); updateUsersPager();
     });
   });
   document.getElementById('searchUsers').addEventListener('input', ()=>{ usersTotalCache.clear(); loadUsers(0); });
@@ -818,7 +782,7 @@
   setInterval(()=>{ if(auto2 && auto2.checked) loadFinalRequests(); }, 15000);
   setInterval(()=>{ if(auto3 && auto3.checked) loadUsers(usersPage); }, 15000);
 
-  // ---------- Backup (بدون تغییر) ----------
+  // ---------- Backup ----------
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   function downloadJSON(filename, obj) {
     const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
@@ -897,5 +861,4 @@
   });
 </script>
 </body>
-
 </html>
