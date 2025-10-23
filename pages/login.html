@@ -292,8 +292,8 @@
       btn.textContent = isPass ? 'Hide':'Show'; btn.setAttribute('aria-pressed', String(isPass)); }); } })();
 
   const USERNAME_RE = /^[A-Za-z0-9]+$/;
-  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,}$/;
-  const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;      // <-- fixed (\d)
+  const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;                  // <-- fixed (\s and \.)
 
   function showError(msg){ const el = document.getElementById('errorMessage'); if (el) el.textContent = msg || ''; else alert(msg); }
   function setBusy(button, busy){ if(!button) return; button.setAttribute('aria-busy', busy ? 'true':'false'); button.disabled = !!busy; }
@@ -303,10 +303,10 @@
     const submitBtn = document.getElementById('formBtn');
     setBusy(submitBtn, true);
 
-    const username = document.querySelector('input[name=\"username\"]').value.trim();
-    const password = document.querySelector('input[name=\"password\"]').value;
-    const emailInput = document.querySelector('input[name=\"email\"]');
-    const confirmInput = document.querySelector('input[name=\"confirm\"]');
+    const username = document.querySelector('input[name="username"]').value.trim();
+    const password = document.querySelector('input[name="password"]').value;
+    const emailInput = document.querySelector('input[name="email"]');
+    const confirmInput = document.querySelector('input[name="confirm"]');
     const errorMessage = document.getElementById('errorMessage'); errorMessage.textContent = '';
 
     try {
@@ -344,7 +344,7 @@
   const forgotForm   = document.getElementById('forgot-form');
   const forgotMsg    = document.getElementById('forgot-msg');
 
-  const focusableSel = 'button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])';
+  const focusableSel = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
   let lastActiveEl = null;
 
   function openForgotModal() {
@@ -404,7 +404,7 @@
   }
 
   if (forgotLink) { forgotLink.addEventListener('click', (e) => { e.preventDefault(); openForgotModal(); }); }
-  if (forgotCancel) forgotCancel.addEventListener('click', () => closeForgotModal());
+  if (forgotCancel) forgotCancel.addEventListener('click', () => closeForgotModal(););
 
   forgotModal.addEventListener('click', (e) => { if (e.target === forgotModal) closeForgotModal(); });
 
