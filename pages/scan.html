@@ -2,12 +2,30 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#05070e" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
+/* === Mobile app-like behavior additions (no pinch-zoom, vertical pan only) === */
+html, body {
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+* { -webkit-tap-highlight-color: transparent; }
+body { overflow-x: hidden; }
+img, canvas, svg, video { max-width: 100%; height: auto; }
+@supports (padding: max(0px)) {
+  body { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+}
+/* lock horizontal scroll on main containers */
+#appMain, .pro-panel, .scroll-area { overflow-x: hidden; }
+
   :root{ --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89; --grid:#0e1628; --panel:rgba(10,16,26,.65); --panel2:rgba(6,12,20,.55) }
   html,body{height:100%}
   body{
@@ -1398,7 +1416,7 @@ const SP_SAVE_DEBOUNCE_MS = 3000;
 const SP_FLUSH_MS = 15000;
 
 // Try to reuse your API base if defined; fallback to '/api'
-let SP_API_BASE = '/api';
+let SP_API_BASE = 'https://web-production-13d5a.up.railway.app/api';
 try {
   if (typeof API_BASE === 'string' && API_BASE) {
     const u = new URL(API_BASE, window.location.href);
