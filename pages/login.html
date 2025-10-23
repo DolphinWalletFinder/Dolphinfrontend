@@ -9,41 +9,31 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
 <style>
-  /* ============ Visual foundation ============ */
-  :root{
-    --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+  :root{ --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
     --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
     --text:#eafaff; --text-dim:rgba(190,245,255,.9);
     --error:#ffb4b4; --ok:#8fffd3;
     --input-bg:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.02));
-    --bd:rgba(64,203,255,.28);
-  }
+    --bd:rgba(64,203,255,.28); }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{
-    margin:0;color:var(--text);
-    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  body{ margin:0;color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     overflow-x:hidden;overflow-y:auto;
-    background:
-      radial-gradient(1200px 600px at 70% 20%, rgba(30,150,255,.10), transparent 60%),
-      radial-gradient(1000px 600px at 10% 80%, rgba(20,255,137,.10), transparent 60%),
-      linear-gradient(180deg,#060912,#05070e 40%,#04060c);
-  }
+    background: radial-gradient(1200px 600px at 70% 20%, rgba(30,150,255,.10), transparent 60%),
+               radial-gradient(1000px 600px at 10% 80%, rgba(20,255,137,.10), transparent 60%),
+               linear-gradient(180deg,#060912,#05070e 40%,#04060c); }
   .stage{min-height:100%;position:relative;display:grid;place-items:center;padding:clamp(12px,4vw,32px)}
-  .hud{
-    position:relative;width:min(1080px,96vw);display:grid;grid-template-columns:1.1fr 1.2fr;border-radius:24px;overflow:hidden;
-    background:linear-gradient(180deg,var(--panel),var(--panel2));
-    border:1px solid rgba(64,203,255,.25);
-    box-shadow:inset 0 0 0 1px rgba(19,173,255,.06),0 28px 90px rgba(0,0,0,.65)
-  }
+  .hud{ position:relative;width:min(1080px,96vw);display:grid;grid-template-columns:1.1fr 1.2fr;border-radius:24px;overflow:hidden;
+    background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid rgba(64,203,255,.25);
+    box-shadow:inset 0 0 0 1px rgba(19,173,255,.06),0 28px 90px rgba(0,0,0,.65) }
   @media (max-width:980px){ .hud{grid-template-columns:1fr} }
   .brand .inner{height:100%;padding:24px;display:flex;flex-direction:column;justify-content:space-between}
-  .title{
-    margin:14px 0 0;font-weight:800;letter-spacing:.12em;font-size:clamp(20px,2.2vw,28px);
-    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent
-  }
+  .title{ margin:14px 0 0;font-weight:800;letter-spacing:.12em;font-size:clamp(20px,2.2vw,28px);
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent }
   .pane{padding:24px clamp(18px,4vw,36px);display:flex;flex-direction:column;gap:16px;height:100%}
-  .panel-mask{position:absolute;inset:12px;border-radius:18px;border:1px dashed rgba(32,205,255,.16);pointer-events:none;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+  .panel-mask{position:absolute;inset:12px;border-radius:18px;border:1px dashed rgba(32,205,255,.16);pointer-events:none;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
   .kicker{display:inline-flex;gap:8px;align-items:center;padding:.35rem .8rem;border-radius:999px;border:1px solid rgba(0,255,240,.25);background:rgba(0,20,28,.35);font-size:.88rem;font-weight:800;width:max-content}
   .tabs{display:flex;gap:10px;margin-top:8px}
   .tab{flex:1;text-align:center;padding:.7rem 1rem;border-radius:12px;border:1px solid rgba(64,203,255,.24);background:rgba(255,255,255,.04);font-weight:900;cursor:pointer;color:var(--text)}
@@ -55,52 +45,34 @@
   .label{font-size:.98rem;color:var(--text-dim)}
   .control{position:relative}
   .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.95}
-  .input{
-    width:100%;padding:14px 44px;font-size:16px;color:var(--text);border-radius:12px;border:1px solid var(--bd);
-    background:var(--input-bg);outline:none;transition:border .18s ease, box-shadow .18s ease
-  }
+  .input{ width:100%;padding:14px 44px;font-size:16px;color:var(--text);border-radius:12px;border:1px solid var(--bd);
+    background:var(--input-bg);outline:none;transition:border .18s ease, box-shadow .18s ease }
   .input::placeholder{color:rgba(220,245,255,.55)}
   .input:focus{border-color:rgba(53,167,255,.95);box-shadow:0 0 0 3px rgba(53,167,255,.28)}
-  .toggle-pass{
-    position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--text);
-    font-weight:800;padding:6px 10px;border-radius:8px;cursor:pointer
-  }
+  .toggle-pass{ position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--text);
+    font-weight:800;padding:6px 10px;border-radius:8px;cursor:pointer }
   .error{min-height:16px;color:var(--error);font-size:.9rem}
   .cta{grid-column:1/-1;display:flex;gap:12px;align-items:center;margin-top:6px;flex-wrap:wrap}
-  .btn{
-    flex:1;min-width:140px;border:none;border-radius:14px;color:#001018;padding:16px 18px;font-weight:900;letter-spacing:.35px;text-transform:uppercase;
-    background:linear-gradient(95deg,#35a7ff,#0ff1e7,#14ff89,#35a7ff);background-size:220% 100%;box-shadow:0 24px 50px rgba(53,167,255,.30), inset 0 0 0 1px rgba(0,0,0,.28)
-  }
+  .btn{ flex:1;min-width:140px;border:none;border-radius:14px;color:#001018;padding:16px 18px;font-weight:900;letter-spacing:.35px;text-transform:uppercase;
+    background:linear-gradient(95deg,#35a7ff,#0ff1e7,#14ff89,#35a7ff);background-size:220% 100%;box-shadow:0 24px 50px rgba(53,167,255,.30), inset 0 0 0 1px rgba(0,0,0,.28) }
   .btn[aria-busy="true"]{opacity:.65;cursor:progress}
   .btn:disabled{opacity:.55;cursor:not-allowed}
   .footer{width:min(1080px,96vw);margin:18px auto 0;text-align:center;color:rgba(190,245,255,.85);font-size:.86rem}
 
-  /* ============ Forgot modal ============ */
   .hidden{display:none}
-
   .stage, .hud, .pane, .brand, .panel-mask, main, section, aside { position: relative; z-index: 1; }
 
-  .modal{
-    position:fixed;inset:0;background:rgba(0,0,0,.55);
-    display:flex;align-items:center;justify-content:center;z-index:2147483000;
-    padding:16px; isolation:isolate;
-  }
+  .modal{ position:fixed;inset:0;background:rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:center;z-index:2147483000; padding:16px; isolation:isolate; }
   .modal.hidden{display:none !important}
-  .modal-content{
-    background:#061018;padding:18px;border-radius:14px;width:100%;max-width:520px;border:1px solid rgba(90,200,255,.14);
-    box-shadow:0 18px 70px rgba(0,0,0,.65);outline:none
-  }
+  .modal-content{ background:#061018;padding:18px;border-radius:14px;width:100%;max-width:520px;border:1px solid rgba(90,200,255,.14);
+    box-shadow:0 18px 70px rgba(0,0,0,.65);outline:none }
   .modal h3{margin:0 0 8px;font-size:1.15rem;color:#dff}
   .modal .row{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
   .modal .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
   .modal .msg{color:rgba(200,255,230,.92);font-size:.98rem}
-  .modal .btn-ghost{
-    background:transparent;color:#dff;border:1px solid rgba(255,255,255,.12); padding:12px 14px;border-radius:10px;font-weight:700
-  }
-  @media (max-width:420px){
-    .modal-content{padding:16px;border-radius:12px}
-    .modal h3{font-size:1.05rem}
-  }
+  .modal .btn-ghost{ background:transparent;color:#dff;border:1px solid rgba(255,255,255,.12); padding:12px 14px;border-radius:10px;font-weight:700 }
+  @media (max-width:420px){ .modal-content{padding:16px;border-radius:12px} .modal h3{font-size:1.05rem} }
   body.modal-open{height:100%;overflow:hidden}
 </style>
 </head>
@@ -109,11 +81,7 @@
     <section class="hud" role="main" aria-labelledby="brandTitle">
       <aside class="brand">
         <div class="inner">
-          <div>
-            <div class="logo-wrap">
-              <img src="../assets/logo.png" alt="Dolphin logo"/>
-            </div>
-          </div>
+          <div><div class="logo-wrap"><img src="../assets/logo.png" alt="Dolphin logo"/></div></div>
           <h1 id="brandTitle" class="title">DOLPHIN WALLET FINDER</h1>
         </div>
       </aside>
@@ -180,39 +148,32 @@
       </section>
     </section>
 
-    <div id="forgot-modal" class="modal hidden" aria-hidden="true">
-      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" tabindex="-1">
-        <h3 id="forgotTitle">Reset password</h3>
-        <form id="forgot-form" autocomplete="off">
-          <div class="row">
-            <label class="label" for="forgot-username">Username</label>
-            <input id="forgot-username" class="input" type="text" autocomplete="username" placeholder="Your username" required />
-          </div>
-          <div class="row">
-            <label class="label" for="forgot-email">Email</label>
-            <input id="forgot-email" class="input" type="email" autocomplete="email" placeholder="you@example.com" required />
-          </div>
-          <div class="row">
-            <label class="label" for="forgot-newpass">New password</label>
-            <input id="forgot-newpass" class="input" type="password" placeholder="New password" required />
-          </div>
-          <div class="row">
-            <label class="label" for="forgot-newpass2">Repeat new password</label>
-            <input id="forgot-newpass2" class="input" type="password" placeholder="Repeat new password" required />
-          </div>
-          <div class="actions" style="margin-top:8px">
-            <div class="msg" id="forgot-msg" role="alert" aria-live="polite" style="flex:1"></div>
-            <div class="btns">
-              <button type="button" class="btn-ghost" id="forgot-cancel">Cancel</button>
-              <button type="submit" class="btn" id="forgot-submit">Reset</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <div class="footer">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
   </main>
+
+  <!-- Forgot password modal moved OUTSIDE #appRoot so 'inert' won't affect it -->
+  <div id="forgot-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" tabindex="-1">
+      <h3 id="forgotTitle">Reset password</h3>
+      <form id="forgot-form" autocomplete="off">
+        <div class="row"><label class="label" for="forgot-username">Username</label>
+          <input id="forgot-username" class="input" type="text" autocomplete="username" placeholder="Your username" required /></div>
+        <div class="row"><label class="label" for="forgot-email">Email</label>
+          <input id="forgot-email" class="input" type="email" autocomplete="email" placeholder="you@example.com" required /></div>
+        <div class="row"><label class="label" for="forgot-newpass">New password</label>
+          <input id="forgot-newpass" class="input" type="password" placeholder="New password" required /></div>
+        <div class="row"><label class="label" for="forgot-newpass2">Repeat new password</label>
+          <input id="forgot-newpass2" class="input" type="password" placeholder="Repeat new password" required /></div>
+        <div class="actions" style="margin-top:8px">
+          <div class="msg" id="forgot-msg" role="alert" aria-live="polite" style="flex:1"></div>
+          <div class="btns">
+            <button type="button" class="btn-ghost" id="forgot-cancel">Cancel</button>
+            <button type="submit" class="btn" id="forgot-submit">Reset</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 
 <script type="module" src="../js/login-api.js"></script>
 <script>
@@ -241,33 +202,17 @@
   modeToggle.addEventListener('click', toggleForm);
   applyMode();
 
-  (function(){
-    const input=document.getElementById('password');
-    const btn=document.getElementById('tgl');
-    if(btn && input){
-      btn.addEventListener('click',()=>{
-        const isPass = input.type==='password';
-        input.type = isPass ? 'text':'password';
-        btn.textContent = isPass ? 'Hide':'Show';
-        btn.setAttribute('aria-pressed', String(isPass));
-      });
-    }
-  })();
+  (function(){ const input=document.getElementById('password'); const btn=document.getElementById('tgl');
+    if(btn && input){ btn.addEventListener('click',()=>{
+      const isPass = input.type==='password'; input.type = isPass ? 'text':'password';
+      btn.textContent = isPass ? 'Hide':'Show'; btn.setAttribute('aria-pressed', String(isPass)); }); } })();
 
   const USERNAME_RE = /^[A-Za-z0-9]+$/;
   const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,}$/;
   const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
-  function showError(msg){
-    const el = document.getElementById('errorMessage');
-    if (el) el.textContent = msg || '';
-    else alert(msg);
-  }
-  function setBusy(button, busy){
-    if(!button) return;
-    button.setAttribute('aria-busy', busy ? 'true':'false');
-    button.disabled = !!busy;
-  }
+  function showError(msg){ const el = document.getElementById('errorMessage'); if (el) el.textContent = msg || ''; else alert(msg); }
+  function setBusy(button, busy){ if(!button) return; button.setAttribute('aria-busy', busy ? 'true':'false'); button.disabled = !!busy; }
 
   document.getElementById('accessForm').addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -278,8 +223,7 @@
     const password = document.querySelector('input[name=\"password\"]').value;
     const emailInput = document.querySelector('input[name=\"email\"]');
     const confirmInput = document.querySelector('input[name=\"confirm\"]');
-    const errorMessage = document.getElementById('errorMessage');
-    errorMessage.textContent = '';
+    const errorMessage = document.getElementById('errorMessage'); errorMessage.textContent = '';
 
     try {
       if (isRegisterMode) {
@@ -330,6 +274,7 @@
     forgotModal.removeAttribute('aria-hidden');
     document.body.classList.add('modal-open');
 
+    // Now safe to inert the appRoot (modal is outside it)
     if (appRoot) { appRoot.setAttribute('inert', ''); appRoot.setAttribute('aria-hidden', 'true'); }
 
     lastActiveEl = document.activeElement;
@@ -337,7 +282,7 @@
       const first = document.getElementById('forgot-username');
       if (first && typeof first.focus === 'function') first.focus();
       else if (modalPanel && typeof modalPanel.focus === 'function') modalPanel.focus();
-    }, 100);
+    }, 50);
   }
 
   function closeForgotModal() {
@@ -360,34 +305,20 @@
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
 
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault(); last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault(); first.focus();
-    }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
-  if (forgotLink) {
-    forgotLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      openForgotModal();
-    });
-  }
+  if (forgotLink) { forgotLink.addEventListener('click', (e) => { e.preventDefault(); openForgotModal(); }); }
   if (forgotCancel) forgotCancel.addEventListener('click', () => closeForgotModal());
 
-  forgotModal.addEventListener('click', (e) => {
-    if (e.target === forgotModal) closeForgotModal();
-  });
+  // backdrop click
+  forgotModal.addEventListener('click', (e) => { if (e.target === forgotModal) closeForgotModal(); });
 
+  // Esc + focus trap
   document.addEventListener('keydown', (e) => {
-    const isOpen = !forgotModal.classList.contains('hidden');
-    if (!isOpen) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeForgotModal();
-    } else {
-      trapFocus(e);
-    }
+    const isOpen = !forgotModal.classList.contains('hidden'); if (!isOpen) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeForgotModal(); } else { trapFocus(e); }
   });
 
   if (forgotForm) {
@@ -412,18 +343,11 @@
 
       try {
         const resp = await window.DWF_API.resetPassword(username, email, newPass);
-        if (resp && resp.ok) {
-          forgotMsg.textContent = 'If provided username/email are valid, password has been updated.';
-          setTimeout(() => closeForgotModal(), 900);
-        } else {
-          forgotMsg.textContent = 'Reset request processed.';
-          setTimeout(() => closeForgotModal(), 900);
-        }
+        if (resp && resp.ok) { forgotMsg.textContent = 'If provided username/email are valid, password has been updated.'; setTimeout(() => closeForgotModal(), 900); }
+        else { forgotMsg.textContent = 'Reset request processed.'; setTimeout(() => closeForgotModal(), 900); }
       } catch (err) {
         forgotMsg.textContent = err.message || 'Server error during reset.';
-      } finally {
-        submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy');
-      }
+      } finally { submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy'); }
     });
   }
 
@@ -434,21 +358,12 @@
 
       let role = localStorage.getItem('role');
       if (!role) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
-          role = payload.role || 'user';
-          localStorage.setItem('role', role);
-        } catch (_) { role = 'user'; }
+        try { const payload = JSON.parse(atob(token.split('.')[1] || '{}')); role = payload.role || 'user'; localStorage.setItem('role', role); }
+        catch(_) { role = 'user'; }
       }
 
-      if (role === 'admin') {
-        window.location.href = "/pages/admin-licenses.html";
-        return;
-      }
-
-      if (window.DWF_API && typeof window.DWF_API.smartRedirectAfterLogin === 'function') {
-        await window.DWF_API.smartRedirectAfterLogin();
-      }
+      if (role === 'admin') { window.location.href = "/pages/admin-licenses.html"; return; }
+      if (window.DWF_API && typeof window.DWF_API.smartRedirectAfterLogin === 'function') { await window.DWF_API.smartRedirectAfterLogin(); }
     } catch (_) { }
   });
 </script>
