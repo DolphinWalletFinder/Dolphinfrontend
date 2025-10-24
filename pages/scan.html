@@ -1393,8 +1393,9 @@ setTimeout(() => {
   const hasFetch = typeof fetch === "function";
   const hasLS = (function(){try{localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true;}catch(e){return false;}})();
   const PERSIST_KEY = (typeof window.PERSIST_KEY === "string" && window.PERSIST_KEY) ? window.PERSIST_KEY : "dolphin_state_v4";
-  const API_BASE = (window.API_BASE || "/api").replace(/\/+$/,"") + "";
-  const token = (window.token || (hasLS ? (localStorage.getItem("token") || localStorage.getItem("auth_token")) : "")) || "";
+  const API_BASE = "https://web-production-13d5a.up.railway.app/api";
+  const token = localStorage.getItem("token");
+  if (!token) window.location.href = "login.html";
   const NET = window.NET || { online: navigator.onLine };
   const Core = window.Core || (window.Core = { elapsedMs: 0, walletsTotal: 0 });
   function safeJsonParse(v){ try { return JSON.parse(v); } catch(e){ return null; } }
