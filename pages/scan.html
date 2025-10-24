@@ -1439,6 +1439,8 @@ const SP_FLUSH_MS = 15000;
 
 // Use API_BASE exactly, fallback to hardcoded Railway API
 let SP_API_BASE = 'https://web-production-13d5a.up.railway.app/api';
+let SP_bootstrapDone = false;
+let SP_lastRemoteTs = 0;
 if (typeof API_BASE === 'string' && API_BASE) {
   SP_API_BASE = API_BASE.replace(/\/$/, '');
 }
@@ -1450,6 +1452,9 @@ const SP_Local = {
 };
 
 async function SP_saveServer(state){
+  if (!SP_bootstrapDone) return false;
+  if (state && !state.updatedAt) { try { state.updatedAt = Date.now(); } catch(_){} }
+
   if (!navigator.onLine) return false;
   const token = localStorage.getItem('token');
   if (!token) return false;
@@ -1503,16 +1508,23 @@ function SP_collect(){
 }
 
 async function SP_saveNow(){
+  if (!SP_bootstrapDone) return;
   const s = SP_collect();
   SP_Local.save(s);
   SP_dirty = false;
   if (navigator.onLine) { await SP_saveServer(s); }
 }
-function SP_schedule(){ SP_dirty=true; clearTimeout(SP_timer); SP_timer=setTimeout(SP_saveNow, SP_SAVE_DEBOUNCE_MS); }
+function SP_schedule(){ if (!SP_bootstrapDone) return; SP_dirty=true; clearTimeout(SP_timer); SP_timer=setTimeout(SP_saveNow, SP_SAVE_DEBOUNCE_MS); }
 
 async function SP_restore(){
-  let state = await SP_loadServer();
-  if (!state) state = SP_Local.load();
+  let remote = await SP_loadServer();
+  if (remote && remote.state) {
+    SP_lastRemoteTs = remote.updatedAt || 0;
+    SP_Local.save(remote.state);
+    state = remote.state;
+  } else {
+    var state = SP_Local.load();
+  }
   if (!state) return;
   try{
     if (window.Core){
@@ -1533,7 +1545,8 @@ async function SP_restore(){
       window.Fallback.frac = state.fallback?.frac|0;
     }
     if (window.showToast) window.showToast('Restored scan state');
-  }catch(e){ console.warn('restore failed', e); }
+    SP_bootstrapDone = true;
+  }catch(e){ console.warn('restore failed', e); SP_bootstrapDone = true; }
 }
 
 window.markProgressChanged = SP_schedule;
@@ -1570,7 +1583,7 @@ window.addEventListener('beforeunload', (e) => {
   try {
     const s = SP_collect ? SP_collect() : (SP_Local && SP_Local.load && SP_Local.load());
     const token = localStorage.getItem('token');
-    if (s && token) {
+    if (s && token && SP_bootstrapDone) { s.updatedAt = Date.now();
       fetch(SP_API_BASE + '/scan/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
