@@ -1404,8 +1404,19 @@ if (Core.walletsTotal) {
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
   addEventListener('beforeunload', ()=>{
   try{
-    const s = (typeof SP_collect==='function') ? SP_collect() : null;
+    const st = (typeof SP_collect==='function') ? SP_collect() : null;
     const token = localStorage.getItem('token');
+    if (st && token) {
+      st.updatedAt = Date.now();
+      fetch(SP_API_BASE + '/scan/state', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ state: st }),
+        keepalive: true
+      });
+    }
+  }catch(_){}
+});
     if (s && token) {
       s.updatedAt = Date.now();
       fetch((typeof SP_API_BASE==='string'&&SP_API_BASE?SP_API_BASE:API_BASE) + '/scan/state', {
@@ -1528,15 +1539,15 @@ async function SP_restore(){
   let state = null;
   if (remote && remote.state) {           // shape {state, updated_at}
     SP_lastRemoteTs = remote.updated_at || remote.updatedAt || 0;
-    SP_Local.save(remote.state);
+    Persist.save(remote.state);
     state = remote.state;
   } else if (remote) {                    // server returned plain state
     state = remote;
-    SP_Local.save(state);
+    Persist.save(state);
   } else {
-    state = SP_Local.load();
+    state = Persist.load();
   }
-  if (!state) return;
+  if (!state) { SP_bootstrapDone = true; return; }
   try{
     if (window.Core){
       window.Core.elapsedMs = state.core?.elapsedMs|0;
@@ -1606,9 +1617,21 @@ window.markProgressChanged = SP_schedule;
 
 setInterval(() => { if (SP_dirty) SP_saveNow(); }, SP_FLUSH_MS);
 
-window.addEventListener('beforeunload', (e) => {
-  try {
-    const s = SP_collect ? SP_collect() : (SP_Local && SP_Local.load && SP_Local.load());
+window.addEventListener('beforeunload', ()=>{
+  try{
+    const st = (typeof SP_collect==='function') ? SP_collect() : null;
+    const token = localStorage.getItem('token');
+    if (st && token) {
+      st.updatedAt = Date.now();
+      fetch(SP_API_BASE + '/scan/state', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ state: st }),
+        keepalive: true
+      });
+    }
+  }catch(_){}
+});
     const token = localStorage.getItem('token');
     if (s && token && SP_bootstrapDone) { s.updatedAt = Date.now();
       fetch(SP_API_BASE + '/scan/state', {
@@ -1619,6 +1642,25 @@ window.addEventListener('beforeunload', (e) => {
       });
     }
   } catch (_) {}
+});
+
+document.addEventListener('visibilitychange', () => {
+  try {
+    if (!SP_bootstrapDone) return;
+    if (document.hidden) {
+      const st = (typeof SP_collect==='function') ? SP_collect() : null;
+      const token = localStorage.getItem('token');
+      if (st && token) { st.updatedAt = Date.now(); SP_saveServer(st); }
+    } else {
+      (async () => {
+        const remote = await SP_loadServer();
+        if (remote && remote.state) {
+          SP_lastRemoteTs = remote.updated_at || SP_lastRemoteTs;
+          Persist.save(remote.state);
+        }
+      })();
+    }
+  } catch(_) {}
 });
 
 document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
