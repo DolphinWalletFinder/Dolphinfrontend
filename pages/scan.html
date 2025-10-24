@@ -1462,7 +1462,7 @@ async function SP_saveServer(state){
     return res.ok;
   }catch(e){ return false; }
 }
-async async function SP_loadServer(){
+async function SP_loadServer(){
   const token = localStorage.getItem('token');
   if (!token) return null;
   try{
