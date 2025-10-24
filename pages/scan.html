@@ -1580,10 +1580,6 @@ window.addEventListener('beforeunload', (e) => {
     }
   } catch (_) {}
 });
-      navigator.sendBeacon(url, payload);
-    }
-  }catch(e){}
-});
 
 document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
 
