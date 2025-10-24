@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
+<!-- Early shim to avoid ReferenceError if code calls backend* before it's defined -->
+<script>
+if (typeof window.backendClearScanState !== 'function') {
+  window.backendClearScanState = function(){ try { return window.clearBackendScanState ? window.clearBackendScanState() : Promise.resolve(true); } catch(e){ return Promise.resolve(true);} };
+}
+if (typeof window.backendSaveScanState !== 'function') {
+  window.backendSaveScanState = function(state){ return Promise.resolve(true); };
+}
+if (typeof window.backendFetchScanState !== 'function') {
+  window.backendFetchScanState = function(){ return Promise.resolve(null); };
+}
+</script>
+
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
