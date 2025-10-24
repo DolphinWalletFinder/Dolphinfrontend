@@ -1447,6 +1447,7 @@ async function SP_saveServer(state){
   console.info('[SP] save:attempt', {bootstrap: SP_bootstrapDone, state});
   if (!SP_bootstrapDone) return false;
   if (state && !state.updatedAt) { try { state.updatedAt = Date.now(); } catch(_){} }
+  try { const core = state && state.core || {}; const isZero = (!core.walletsTotal && !core.elapsedMs); if (isZero && SP_lastRemoteTs > 0) return false; } catch(_) {}
 
   if (!navigator.onLine) return false;
   const token = localStorage.getItem('token');
@@ -1514,7 +1515,7 @@ async function SP_restore(){
   let remote = await SP_loadServer();
   let state = null;
   if (remote && remote.state) { console.info('[SP] restore:server-shape', remote);           // shape {state, updated_at}
-    SP_lastRemoteTs = remote.updated_at || remote.updatedAt || 0;
+    SP_lastRemoteTs = (function(x){ const t = Date.parse(x); return isNaN(t)?0:t; })(remote.updated_at || remote.updatedAt);
     Persist.save(remote.state);
     state = remote.state;
   } else if (remote) { console.info('[SP] restore:plain-state', remote);                    // server returned plain state
@@ -1620,7 +1621,7 @@ document.addEventListener('visibilitychange', () => {
       (async () => {
         const remote = await SP_loadServer();
         if (remote && remote.state) { console.info('[SP] restore:server-shape', remote);
-          SP_lastRemoteTs = remote.updated_at || SP_lastRemoteTs;
+          SP_lastRemoteTs = (function(x){ const t = Date.parse(x); return isNaN(t)?SP_lastRemoteTs:t; })(remote.updated_at || remote.updatedAt);
           Persist.save(remote.state);
         }
       })();
