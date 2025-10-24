@@ -1462,33 +1462,11 @@ const SP_Local = {
   clear(){ try{ localStorage.removeItem(SP_PERSIST_KEY); }catch(e){} }
 };
 
-async function SP_saveServer(state){
-  console.info('[SP] save:attempt', {bootstrap: SP_bootstrapDone, state});
-  if (!SP_bootstrapDone) return false;
-  if (state && !state.updatedAt) { try { state.updatedAt = Date.now(); } catch(_){} }
-  try { const core = state && state.core || {}; const isZero = (!core.walletsTotal && !core.elapsedMs); if (isZero && SP_lastRemoteTs > 0) return false; } catch(_) {}
-
-  if (!navigator.onLine) return false;
-  const token = localStorage.getItem('token');
-  if (!token) return false;
-  try{
-    const res = await fetch(SP_API_BASE + '/scan/state', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ state })
-    });
+async function SP_saveServer(state){ try { await backendSaveScanState(state); return true; } catch(e){ return false; } });
     return res.ok;
   }catch(e){ return false; }
 }
-async function SP_loadServer(){
-  const token = localStorage.getItem('token');
-  if (!token) return null;
-  try{
-    const res = await fetch(SP_API_BASE + '/scan/state', {
-      method: 'GET',
-      headers: { 'Authorization': 'Bearer ' + token },
-      cache: 'no-store'
-    });
+async function SP_loadServer(){ try { return await backendFetchScanState(); } catch(e){ return null; } });
     if (!res.ok) return null;
     const j = await res.json();
     return j || null;
@@ -1678,7 +1656,7 @@ async function backendFetchScanState() {
   const token = localStorage.getItem('token');
   if (!token) return null;
   try {
-    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state', {
+    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state', {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (!r.ok) return null;
@@ -1690,7 +1668,7 @@ async function backendSaveScanState(state) {
   const token = localStorage.getItem('token');
   if (!token) return false;
   try {
-    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state', {
+    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state', {
       method: 'POST',
       headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ data: state })
@@ -1702,7 +1680,7 @@ async function backendClearScanState() {
   const token = localStorage.getItem('token');
   if (!token) return false;
   try {
-    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state', {
+    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer ' + token }
     });
@@ -1765,7 +1743,7 @@ window.addEventListener('beforeunload', () => {
     const s = Persist.load();
     if (!s) return;
     const data = JSON.stringify({ data: s });
-    const url = ((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state');
+    const url = ((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state');
     navigator.sendBeacon(url, data);
   } catch {}
 });
