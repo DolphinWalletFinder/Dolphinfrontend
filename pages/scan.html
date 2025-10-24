@@ -1577,6 +1577,22 @@ window.markProgressChanged = SP_schedule;
   }
 })();
 
+
+// ===== Change-detection heartbeat to ensure autosave while scanning =====
+(function(){
+  let __sp_prev = { total: 0, elapsed: 0 };
+  setInterval(() => {
+    try{
+      const t = (window.Core && window.Core.walletsTotal)|0;
+      const e = (window.Core && window.Core.elapsedMs)|0;
+      if (t !== __sp_prev.total || e !== __sp_prev.elapsed) {
+        __sp_prev.total = t; __sp_prev.elapsed = e;
+        SP_schedule();
+      }
+    }catch(_){}
+  }, 5000);
+})();
+
 setInterval(() => { if (SP_dirty) SP_saveNow(); }, SP_FLUSH_MS);
 
 window.addEventListener('beforeunload', (e) => {
