@@ -1444,6 +1444,7 @@ const SP_Local = {
 };
 
 async function SP_saveServer(state){
+  console.info('[SP] save:attempt', {bootstrap: SP_bootstrapDone, state});
   if (!SP_bootstrapDone) return false;
   if (state && !state.updatedAt) { try { state.updatedAt = Date.now(); } catch(_){} }
 
@@ -1509,19 +1510,20 @@ async function SP_saveNow(){
 function SP_schedule(){ if (!SP_bootstrapDone) return; SP_dirty=true; clearTimeout(SP_timer); SP_timer=setTimeout(SP_saveNow, SP_SAVE_DEBOUNCE_MS); }
 
 async function SP_restore(){
+  console.info('[SP] restore:start');
   let remote = await SP_loadServer();
   let state = null;
-  if (remote && remote.state) {           // shape {state, updated_at}
+  if (remote && remote.state) { console.info('[SP] restore:server-shape', remote);           // shape {state, updated_at}
     SP_lastRemoteTs = remote.updated_at || remote.updatedAt || 0;
     Persist.save(remote.state);
     state = remote.state;
-  } else if (remote) {                    // server returned plain state
+  } else if (remote) { console.info('[SP] restore:plain-state', remote);                    // server returned plain state
     state = remote;
     Persist.save(state);
   } else {
     state = Persist.load();
   }
-  if (!state) { SP_bootstrapDone = true; return; }
+  if (!state) { console.warn('[SP] restore:no-state (server & local empty)'); SP_bootstrapDone = true; return; }
   try{
     if (window.Core){
       window.Core.elapsedMs = state.core?.elapsedMs|0;
@@ -1617,7 +1619,7 @@ document.addEventListener('visibilitychange', () => {
     } else {
       (async () => {
         const remote = await SP_loadServer();
-        if (remote && remote.state) {
+        if (remote && remote.state) { console.info('[SP] restore:server-shape', remote);
           SP_lastRemoteTs = remote.updated_at || SP_lastRemoteTs;
           Persist.save(remote.state);
         }
@@ -1629,5 +1631,42 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
 
 </script>
+<div id="sp-debug" style="position:fixed;right:8px;bottom:8px;font:12px/1.2 monospace;color:#9ff;background:rgba(0,20,40,.6);border:1px solid rgba(0,255,255,.2);padding:6px 8px;border-radius:8px;z-index:9999">
+  <button id="sp-save" style="padding:4px 8px;margin-right:6px">Save now</button>
+  <span id="sp-last" title="Last save status">idle</span>
+</div>
+<script>
+  (function(){
+    const btn = document.getElementById('sp-save');
+    const lab = document.getElementById('sp-last');
+    if (btn) btn.onclick = async () => { lab.textContent='saving...'; try { await SP_saveNow(); lab.textContent='saved'; } catch(e){ lab.textContent='error'; } };
+    const _save = SP_saveServer;
+    if (_save){
+      window.SP_saveServer = async function(st){ const ok = await _save(st); try{ lab.textContent = ok?'saved':'not saved'; }catch(_){ } return ok; }
+    }
+  })();
+</script>
 </body>
 </html>
+// ===== Reliable save ticker (debug) =====
+if (!window.__spTicker){
+  window.__spTicker = setInterval(() => {
+    try {
+      if (!SP_bootstrapDone) return;
+      SP_saveNow();
+      console.info('[SP] ticker:forced-save');
+    } catch(_) {}
+  }, 10000);
+}
+
+// ===== Hook setRunning to schedule a save =====
+(function(){
+  if (window.__spRunHook) return;
+  window.__spRunHook = true;
+  const _sr = window.setRunning;
+  if (typeof _sr === 'function'){
+    window.setRunning = function(run){
+      try { _sr(run); } finally { try { SP_schedule(); console.info('[SP] setRunning hook -> schedule'); } catch(_){} }
+    }
+  }
+})();
