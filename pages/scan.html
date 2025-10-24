@@ -1,47 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-<script>window.API_BASE='https://web-production-13d5a.up.railway.app/api';</script>
-<!-- Early shim to avoid ReferenceError if code calls backend* before it's defined -->
-<script>
-if (typeof window.backendClearScanState !== 'function') {
-  window.backendClearScanState = function(){ try { return window.clearBackendScanState ? window.clearBackendScanState() : Promise.resolve(true); } catch(e){ return Promise.resolve(true);} };
-}
-if (typeof window.backendSaveScanState !== 'function') {
-  window.backendSaveScanState = function(state){ return Promise.resolve(true); };
-}
-if (typeof window.backendFetchScanState !== 'function') {
-  window.backendFetchScanState = function(){ return Promise.resolve(null); };
-}
-</script>
-
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="theme-color" content="#05070e" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
-<script src="https://cdn.tailwindcss.com">
-window.clearBackendScanState = backendClearScanState;
-</script>
+<script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-/* === Mobile app-like behavior additions (no pinch-zoom, vertical pan only) === */
-html, body {
-  overscroll-behavior-x: none;
-  overscroll-behavior-y: contain;
-  touch-action: pan-y;
-  -webkit-text-size-adjust: 100%;
-}
-* { -webkit-tap-highlight-color: transparent; }
-body { overflow-x: hidden; }
-img, canvas, svg, video { max-width: 100%; height: auto; }
-@supports (padding: max(0px)) {
-  body { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
-}
-/* lock horizontal scroll on main containers */
-#appMain, .pro-panel, .scroll-area { overflow-x: hidden; }
-
   :root{ --bg:#070b14; --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89; --grid:#0e1628; --panel:rgba(10,16,26,.65); --panel2:rgba(6,12,20,.55) }
   html,body{height:100%}
   body{
@@ -483,11 +449,11 @@ const tacticalPanel=$('tacticalPanel'),
       matrixTop=$('matrixRainTop'), mctxTop=matrixTop.getContext('2d',{alpha:true});
 const matrixWrap = document.querySelector('#tacticalPanel .matrix-safe');
 
-const BIP39 = ["abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act","action","actor","actress","actual","adapt","add","addict","address","adjust","admit","adult","advance","advice","aerobic","affair","afford","afraid","again","age","agent","agree","ahead","aim","air","airport","aisle","alarm","album","alcohol","alert","alien","all","alley","allow","almost","alone","alpha","already","also","alter","always","amateur","amazing","among","amount","amused","analyst","anchor","ancient","anger","angle","angry","animal","ankle","announce","annual","another","answer","antenna","antique","anxiety","any","apart","apology","appear","apple","approve","april","arch","arctic","area","arena","argue","arm","armed","armor","army","around","arrange","arrest","arrive","arrow","art","artefact","artist","artwork","ask","aspect","assault"];
+const BIP39 = ["abandon","ability","access","account","adapt","address","advance","agent","alert","alpha","asset","attack","audit","balance","battery","beach","binary","block","bridge","bundle","cable","camera","cancel","canvas","capital","card","cargo","castle","chain","charge","check","cipher","client","cloud","code","coin","contract","control","core","crystal","data","decide","deploy","detect","device","digital","document","domain","double","draft","drive","dump","dynamic","echo","edge","elegant","element","enable","energy","engine","enhance","enter","entity","entry","equal","erase","error","escape","ethics","evidence","exchange","expand","expect","expose","extend","fabric","fee","field","figure","file","filter","final","finger","flash","flow","force","fork","frame","friend","front","future","gain","gate","gather","gauge","genesis","glow","govern","graph","grid","guard","hash","height","hold","host","image","index","input","install","intact","invest","invite","key","keccak","ledger","level","limit","link","list","lock","log","logic","loop","lottery","major","market","mask","matrix","maximum","mempool","merge","method","miner","model","monitor","motion","network","node","nonce","opcode","oracle","packet","proof","query","quote","relay","reward","root","scan","seed","secure","sign","slot","state","storage","swap","task","token","trace","trade","tx","update","verify","wallet","worker","zk"];
 const GLY_HEX = "0123456789ABCDEF";
 const GLY_ADDR = ()=>"0x"+hex(8).toUpperCase();
 const GLY_B58  = ()=>randB58(8);
-const OPCODES = ["PUSH1","PUSH2","ADD","SUB","MUL","DIV","SLOAD","SSTORE","JUMP","REVERT","EQ","LT","GT","DUP","SWAP"];
+const OPCODES  = ["PUSH1","PUSH2","ADD","SUB","MUL","DIV","SHA3","LOG","CALL","SLOAD","SSTORE","JUMP","REVERT","EQ","LT","GT","DUP","SWAP"];
 
 let matrixPulse=0;
 
@@ -504,13 +470,13 @@ const Matrix = {
       const W=L.canvas.clientWidth;
       L.font=Math.max(13,(W/88)|0)*L.fontMul; L.colW=(L.font*1.08)|0; L.ctx.font=`${L.font}px ui-monospace,monospace`;
       L.cols=Math.max(12,(W/L.colW)|0);
-      L.data = (L.data || Array(L.cols).fill(0).map(()=>({
+      L.state=Array(L.cols).fill(0).map(()=>({
         y: Math.floor(Math.random()*(L.canvas.clientHeight/L.font)),
         v: rand(L.speed[0],L.speed[1]),
         tail: randi(10,16),
         seq: Matrix.makeSeq(L.kind),
         off: 0,
-        tint: 'hsla(' + randi(165,190) + ',70%,70%,0.6)'
+        tint: `hsla(${randi(165,190)},70%,70%,`
       }));
     });
     mctx.clearRect(0,0,matrix.clientWidth,matrix.clientHeight);
@@ -539,7 +505,7 @@ const Matrix = {
       const H=L.canvas.clientHeight, ctx=L.ctx, font=L.font, colW=L.colW;
       ctx.textBaseline='top';
       for(let i=0;i<L.cols;i++){
-        const s = L.data[i];
+        const s=L.state[i];
         const x=i*colW+2+Math.sin((s.y*0.05)+time*0.8)*2;
 
         // faint bar behind the column head
@@ -1398,216 +1364,157 @@ function init(){
   $('wallets').textContent='—'; $('scanTimer').textContent='00:00:00';
   showToast('Ready');
 
-  const saved = (Persist.load?.() || (window.SP_Local?.load?.() || null)) || {};
-if (saved && saved.core) {
-
-  Core.elapsedMs    = saved.core.elapsedMs    | 0;
-  Core.walletsTotal = saved.core.walletsTotal | 0;
-} else {
-
-  Core.elapsedMs    = saved.elapsed | 0;
-  Core.walletsTotal = saved.total   | 0;
-}
-if (Core.walletsTotal) {
-  walletsEl.textContent = formatCount(Core.walletsTotal);
-  fitTextId(walletsEl);
-}
-
+  const saved=Persist.load()||{}; Core.elapsedMs=saved.elapsed||0; Core.walletsTotal=saved.total||0; if(Core.walletsTotal) { walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); }
 
   worker=makeWorker();
   if(worker){ worker.onmessage=(e)=>{ const d=e.data; if(d.t==='S'){ Core.walletsTotal=d.total|0; Core.elapsedMs=d.elapsed|0; walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); } }; worker.postMessage({t:'SYNC',total:Core.walletsTotal,elapsed:Core.elapsedMs}); }
 
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
-
+  addEventListener('beforeunload',()=>{ Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal}); });
  startConnectivityWatchdog();
 }
 init();
 
-const minDelay = 70000000, maxDelay = 90000000;
+const minDelay = 700000000, maxDelay = 900000000;
 const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
 
 setTimeout(() => {
   simulateScan();
   window.location.href = "results.html";
 }, delay);
-
-window.clearBackendScanState = backendClearScanState;
 </script>
-<script src="../assets/wallets.js">
-window.clearBackendScanState = backendClearScanState;
-</script>
+<script src="../assets/wallets.js"></script>
 
+<!-- === Begin: Server Sync for Scan State (resume across devices) === -->
 <script>
-/* ======= Scan Persistence (local + server) =======
-   - Debounced saving of minimal scan state
-   - Restores on load (paused; user must click Start)
-   - Works even if window.Core / window.Fallback are undefined (no-ops)
-   - Requires: authentication token in localStorage ('token')
-   - Server endpoints: GET/POST /api/scan-state
-*/
-const SP_PERSIST_KEY = 'dolphin_state_v4';
-const SP_SAVE_DEBOUNCE_MS = 3000;
-const SP_FLUSH_MS = 15000;
+(function(){
+  // Feature-detect and guardrails
+  const hasFetch = typeof fetch === "function";
+  const hasLS = (function(){try{localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true;}catch(e){return false;}})();
+  const PERSIST_KEY = (typeof PERSIST_KEY === "string" && PERSIST_KEY) ? PERSIST_KEY : "dolphin_state_v4";
+  // Try to reuse existing globals if present
+  const API_BASE = (window.API_BASE || "/api").replace(/\/+$/,"") + "";
+  const token = (window.token || (hasLS ? (localStorage.getItem("token") || localStorage.getItem("auth_token")) : "")) || "";
+  const NET = window.NET || { online: navigator.onLine };
+  const Core = window.Core || (window.Core = { elapsedMs: 0, walletsTotal: 0 });
+  const RUNNING = (typeof window.RUNNING === "boolean") ? window.RUNNING : false;
 
-// Use API_BASE exactly, fallback to hardcoded Railway API
-let SP_API_BASE = 'https://web-production-13d5a.up.railway.app/api';
-let SP_bootstrapDone = false;
-let SP_lastRemoteTs = 0;
-if (typeof API_BASE === 'string' && API_BASE) {
-  SP_API_BASE = API_BASE.replace(/\/$/, '');
-}
+  function safeJsonParse(v){ try { return JSON.parse(v); } catch(e){ return null; } }
+  function formatHMS(ms){
+    const s = Math.floor(ms/1000);
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    return [h,m,sec].map(n=>String(n).padStart(2,"0")).join(":");
+  }
 
-const SP_Local = {
-  save(obj){ try{ localStorage.setItem(SP_PERSIST_KEY, JSON.stringify(obj)); }catch(e){} },
-  load(){ try{ const v=localStorage.getItem(SP_PERSIST_KEY); return v?JSON.parse(v):null; }catch(e){ return null; } },
-  clear(){ try{ localStorage.removeItem(SP_PERSIST_KEY); }catch(e){} }
-};
-
-async function SP_saveServer(state){ try { await backendSaveScanState(state); return true; } catch(e){ return false; } }
-async function SP_loadServer(){ try { return await backendFetchScanState(); } catch(e){ return null; } } catch(e){ return null; } }
-window.clearBackendScanState = backendClearScanState;
-</script>
-<div id="sp-debug" style="position:fixed;right:8px;bottom:8px;font:12px/1.2 monospace;color:#9ff;background:rgba(0,20,40,.6);border:1px solid rgba(0,255,255,.2);padding:6px 8px;border-radius:8px;z-index:9999">
-  <button id="sp-save" style="padding:4px 8px;margin-right:6px">Save now</button>
-  <span id="sp-last" title="Last save status">idle</span>
-</div>
-<script>
-  (function(){
-    const btn = document.getElementById('sp-save');
-    const lab = document.getElementById('sp-last');
-    if (btn) btn.onclick = async () => { lab.textContent='saving...'; try { await SP_saveNow(); lab.textContent='saved'; } catch(e){ lab.textContent='error'; } };
-    const _save = SP_saveServer;
-    if (_save){
-      window.SP_saveServer = async function(st){ const ok = await _save(st); try{ lab.textContent = ok?'saved':'not saved'; }catch(_){ } return ok; }
+  // --- Server helpers ---
+  async function pullScanState() {
+    if (!hasFetch || !token) return { data: null, updated_at: null };
+    try {
+      const res = await fetch(`${API_BASE}/scan-state`, {
+        headers: { Authorization: "Bearer " + token }
+      });
+      if (!res.ok) throw new Error("pull failed");
+      return await res.json(); // { data, updated_at }
+    } catch (e) {
+      return { data: null, updated_at: null };
     }
+  }
+
+  async function pushScanState(data) {
+    if (!hasFetch || !token) return;
+    try {
+      await fetch(`${API_BASE}/scan-state`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token
+        },
+        body: JSON.stringify({ data })
+      });
+    } catch (e) {
+      // swallow; will retry on next save or when online
+    }
+  }
+
+  // --- Local persistence with timestamp ---
+  const PersistEx = {
+    save(s) {
+      const payload = Object.assign({}, s, { savedAt: Date.now() });
+      if (hasLS) {
+        try { localStorage.setItem(PERSIST_KEY, JSON.stringify(payload)); } catch(e){}
+      }
+      return payload;
+    },
+    load() {
+      if (!hasLS) return null;
+      return safeJsonParse(localStorage.getItem(PERSIST_KEY));
+    }
+  };
+
+  function saveLocalAndMaybeServer() {
+    // Allow external code to customize what gets saved by emitting an event to collect state
+    let state = { elapsed: Number(Core.elapsedMs||0), total: Number(Core.walletsTotal||0) };
+    try {
+      const ev = new CustomEvent("scan:collectState", { detail: state, cancelable: false });
+      window.dispatchEvent(ev);
+      // If listeners mutated detail, use it
+      if (ev.detail) state = ev.detail;
+    } catch(e){}
+    const local = PersistEx.save(state);
+    if (NET.online !== false) pushScanState(local);
+  }
+
+  // Auto-save timer (every 15s while running if we can detect it; otherwise always every 30s)
+  let intervalMs = (typeof window.RUNNING === "boolean") ? 15000 : 30000;
+  setInterval(() => {
+    const running = (typeof window.RUNNING === "boolean") ? window.RUNNING : true;
+    if (running) saveLocalAndMaybeServer();
+  }, intervalMs);
+
+  // Save on tab hide and before unload
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveLocalAndMaybeServer();
+  });
+  window.addEventListener('beforeunload', () => {
+    try { saveLocalAndMaybeServer(); } catch(e){}
+  });
+  window.addEventListener('online', () => {
+    const local = PersistEx.load();
+    if (local) pushScanState(local);
+  });
+
+  // Hydrate from best source on startup
+  (async function hydrateFromBestSource(){
+    try {
+      const local = PersistEx.load();
+      const server = await pullScanState(); // {data, updated_at}
+      const serverMs = server && server.updated_at ? Date.parse(server.updated_at) : 0;
+      const localMs  = local && local.savedAt ? Number(local.savedAt) : 0;
+      let state = null;
+      if (serverMs > localMs) {
+        state = server.data;
+      } else if (local) {
+        state = local;
+        if (NET.online !== false) pushScanState(local);
+      }
+      if (state) {
+        if (typeof state.elapsed !== "undefined") Core.elapsedMs = Number(state.elapsed||0);
+        if (typeof state.total   !== "undefined") Core.walletsTotal = Number(state.total||0);
+        // Notify app to repaint if it listens
+        try { window.dispatchEvent(new CustomEvent("scan:stateRestored", { detail: state })); } catch(e){}
+        // Opportunistic UI update if IDs are present
+        const t = document.getElementById('scanTimer');
+        if (t) t.textContent = formatHMS(Core.elapsedMs);
+        const w = document.getElementById('wallets');
+        if (w) w.textContent = String(Core.walletsTotal);
+      }
+    } catch(e){ /* ignore */ }
   })();
 
-window.clearBackendScanState = backendClearScanState;
-</script>
-
-<!-- === Backend scan-state persistence (added) === -->
-<script>
-// ---- Backend scan-state persistence ----
-async function backendFetchScanState() {
-  const token = localStorage.getItem('token');
-  if (!token) return null;
-  try {
-    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state', {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j && j.data ? j.data : null;
-  } catch { return null; }
-}
-async function backendSaveScanState(state) {
-  const token = localStorage.getItem('token');
-  if (!token) return false;
-  try {
-    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ data: state })
-    });
-    return r.ok;
-  } catch { return false; }
-}
-async function backendClearScanState() {
-  const token = localStorage.getItem('token');
-  if (!token) return false;
-  try {
-    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state', {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    return r.ok;
-  } catch { return false; }
-}
-
-// ---- Bridge local Persist <-> backend ----
-const PERSIST_BRIDGE = {
-  throttleMs: 2000,
-  _t: null,
-  push(state, immediate=false){
-    if (immediate) return backendSaveScanState(state);
-    if (this._t) return Promise.resolve(true);
-    this._t = setTimeout(() => { this._t = null; }, this.throttleMs);
-    return backendSaveScanState(state);
-  },
-  async pull(){
-    const s = await backendFetchScanState();
-    if (s && window.Persist && typeof Persist.save==='function') {
-      try { Persist.save(s); } catch {}
-    }
-    return s;
-  },
-  clear(){ return backendClearScanState(); }
-};
-
-// On load: if local storage empty but server has a state, hydrate it.
-(async () => {
-  try {
-    const local = (window.Persist && typeof Persist.load==='function') ? Persist.load() : null;
-    if (!local) {
-      const remote = await PERSIST_BRIDGE.pull();
-      if (remote) console.log('[scan-state] Hydrated local state from backend.');
-    }
-  } catch {}
+  // Public hook if the app wants to force-save on its "Stop" action
+  window.__saveScanStateNow = saveLocalAndMaybeServer;
 })();
-
-// Hook Persist.save to also push to backend
-(function(){
-  if (!window.Persist) return;
-  const _save = Persist.save.bind(Persist);
-  Persist.save = function(s){
-    try { _save(s); } catch {}
-    PERSIST_BRIDGE.push(s, false);
-  };
-})();
-
-// On page hide/unload: flush immediately
-window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && window.Persist && typeof Persist.load==='function') {
-    const s = Persist.load();
-    if (s) PERSIST_BRIDGE.push(s, true);
-  }
-});
-window.addEventListener('beforeunload', () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token || !window.Persist || typeof Persist.load!=='function') return;
-    const s = Persist.load();
-    if (!s) return;
-    const data = JSON.stringify({ data: s });
-    const url = ((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state');
-    navigator.sendBeacon(url, data);
-  } catch {}
-});
-
-window.clearBackendScanState = backendClearScanState;
 </script>
-
+<!-- === End: Server Sync for Scan State === -->
 </body>
 </html>
-// ===== Reliable save ticker (debug) =====
-if (!window.__spTicker){
-  window.__spTicker = setInterval(() => {
-    try {
-      if (!SP_bootstrapDone) return;
-      SP_saveNow();
-      console.info('[SP] ticker:forced-save');
-    } catch(_) {}
-  }, 10000);
-}
-
-// ===== Hook setRunning to schedule a save =====
-(function(){
-  if (window.__spRunHook) return;
-  window.__spRunHook = true;
-  const _sr = window.setRunning;
-  if (typeof _sr === 'function'){
-    window.setRunning = function(run){
-      try { _sr(run); } finally { try { SP_schedule(); console.info('[SP] setRunning hook -> schedule'); } catch(_){} }
-    }
-  }
-})();
