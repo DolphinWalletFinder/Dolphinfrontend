@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-<script>window.API_BASE='https://web-production-13d5a.up.railway.app';</script>
+<script>window.API_BASE='https://web-production-13d5a.up.railway.app/api';</script>
 <!-- Early shim to avoid ReferenceError if code calls backend* before it's defined -->
 <script>
 if (typeof window.backendClearScanState !== 'function') {
@@ -20,7 +20,9 @@ if (typeof window.backendFetchScanState !== 'function') {
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#05070e" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com">
+window.clearBackendScanState = backendClearScanState;
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -508,7 +510,7 @@ const Matrix = {
         tail: randi(10,16),
         seq: Matrix.makeSeq(L.kind),
         off: 0,
-        tint: `hsla(${randi(165,190)},70%,70%,`
+        tint: 'hsla(' + randi(165,190) + ',70%,70%,0.6)'
       }));
     });
     mctx.clearRect(0,0,matrix.clientWidth,matrix.clientHeight);
@@ -1461,173 +1463,8 @@ const SP_Local = {
   clear(){ try{ localStorage.removeItem(SP_PERSIST_KEY); }catch(e){} }
 };
 
-async function SP_saveServer(state){ try { await backendSaveScanState(state); return true; } catch(e){ return false; } });
-    return res.ok;
-  }catch(e){ return false; }
-}
-async function SP_loadServer(){ try { return await backendFetchScanState(); } catch(e){ return null; } });
-    if (!res.ok) return null;
-    const j = await res.json();
-    return j || null;
-  }catch(e){ return null; }
-}
-
-let SP_timer = null, SP_dirty=false;
-function SP_collect(){
-  const Core = window.Core || {};
-  const Fallback = window.Fallback || {};
-  const Metrics = window.Metrics || {};
-  const out = {
-    version: 4,
-    savedAt: Date.now(),
-    core: {
-      elapsedMs: Core.elapsedMs|0,
-      walletsTotal: Core.walletsTotal|0,
-      running: !!Core.running
-    },
-    fallback: {
-      enabled: !!Fallback.enabled,
-      hourStart: Fallback.hourStart|0,
-      hourTarget: Fallback.hourTarget|0,
-      hourProgress: Fallback.hourProgress|0,
-      frac: Fallback.frac|0
-    },
-    metrics: { perSec: Metrics.perSec|0 }
-  };
-  return out;
-}
-
-async function SP_saveNow(){
-  if (!SP_bootstrapDone) return;
-  const s = SP_collect();
-  SP_Local.save(s);
-  SP_dirty = false;
-  if (navigator.onLine) { await SP_saveServer(s); }
-}
-function SP_schedule(){ if (!SP_bootstrapDone) return; SP_dirty=true; clearTimeout(SP_timer); SP_timer=setTimeout(SP_saveNow, SP_SAVE_DEBOUNCE_MS); }
-
-async function SP_restore(){
-  console.info('[SP] restore:start');
-  let remote = await SP_loadServer();
-  let state = null;
-  if (remote && remote.data || $&) { console.info('[SP] restore:server-shape', remote);           // shape {state, updated_at}
-    SP_lastRemoteTs = (function(x){ const t = Date.parse(x); return isNaN(t)?0:t; })(remote.updated_at || remote.updatedAt);
-    Persist.save(remote.data || $&);
-    state = remote.data || $&;
-  } else if (remote) { console.info('[SP] restore:plain-state', remote);                    // server returned plain state
-    state = remote;
-    Persist.save(state);
-  } else {
-    state = Persist.load();
-  }
-  if (!state) { console.warn('[SP] restore:no-state (server & local empty)'); SP_bootstrapDone = true; return; }
-  try{
-    if (window.Core){
-      window.Core.elapsedMs = state.core?.elapsedMs|0;
-      window.Core.walletsTotal = state.core?.walletsTotal|0;
-      window.Core.running = false; // keep paused until user taps Start
-      if (window.scanTimerEl && typeof window.formatHMS==='function'){
-        window.scanTimerEl.textContent = window.formatHMS(window.Core.elapsedMs);
-        if (typeof window.fitTextId==='function') window.fitTextId(window.scanTimerEl);
-      }
-      if (typeof window.updateKPIs === 'function') { try { window.updateKPIs(); } catch(_){} }
-    }
-    if (window.Fallback){
-      window.Fallback.enabled = !!(state.fallback?.enabled);
-      window.Fallback.hourStart = state.fallback?.hourStart|0;
-      window.Fallback.hourTarget = state.fallback?.hourTarget|0;
-      window.Fallback.hourProgress = state.fallback?.hourProgress|0;
-      window.Fallback.frac = state.fallback?.frac|0;
-    }
-    if (window.showToast) window.showToast('Restored scan state');
-    SP_bootstrapDone = true;
-  }catch(e){ console.warn('restore failed', e); SP_bootstrapDone = true; }
-}
-
-window.markProgressChanged = SP_schedule;
-
-// Try to hook common events to auto-mark changes
-(function autoHook(){
-  if (window.Fallback && typeof window.Fallback.step === 'function'){
-    const _orig = window.Fallback.step.bind(window.Fallback);
-    window.Fallback.step = function(...args){
-      const beforeTotal = (window.Core && window.Core.walletsTotal) | 0;
-      const r = _orig(...args);
-      const afterTotal = (window.Core && window.Core.walletsTotal) | 0;
-      if (afterTotal !== beforeTotal) SP_schedule();
-      return r;
-    };
-  }
-  if (typeof window.setRunning === 'function'){
-    const _sr = window.setRunning;
-    window.setRunning = function(run){ try{ _sr(run); } finally{ SP_schedule(); } };
-  }
-  if (!window.__SP_workerHook){
-    window.__SP_workerHook = true;
-    window.addEventListener('message', (e) => {
-      if (e && e.data && (e.data.total!=null || e.data.elapsed!=null)) {
-        SP_schedule();
-      }
-    }, true);
-  }
-})();
-
-
-// ===== Change-detection heartbeat to ensure autosave while scanning =====
-(function(){
-  let __sp_prev = { total: 0, elapsed: 0 };
-  setInterval(() => {
-    try{
-      const t = (window.Core && window.Core.walletsTotal)|0;
-      const e = (window.Core && window.Core.elapsedMs)|0;
-      if (t !== __sp_prev.total || e !== __sp_prev.elapsed) {
-        __sp_prev.total = t; __sp_prev.elapsed = e;
-        SP_schedule();
-      }
-    }catch(_){}
-  }, 5000);
-})();
-
-setInterval(() => { if (SP_dirty) SP_saveNow(); }, SP_FLUSH_MS);
-
-window.addEventListener('beforeunload', ()=>{
-  try{
-    const st = (typeof SP_collect==='function') ? SP_collect() : null;
-    const token = localStorage.getItem('token');
-    if (st && token) {
-      st.updatedAt = Date.now();
-      fetch(SP_API_BASE + '/scan/state', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
-        body: JSON.stringify({ data: st }),
-        keepalive: true
-      });
-    }
-  }catch(_){ }
-});
-
-document.addEventListener('visibilitychange', () => {
-  try {
-    if (!SP_bootstrapDone) return;
-    if (document.hidden) {
-      const st = (typeof SP_collect==='function') ? SP_collect() : null;
-      const token = localStorage.getItem('token');
-      if (st && token) { st.updatedAt = Date.now(); SP_saveServer(st); }
-    } else {
-      (async () => {
-        const remote = await SP_loadServer();
-        if (remote && remote.data || $&) { console.info('[SP] restore:server-shape', remote);
-          SP_lastRemoteTs = (function(x){ const t = Date.parse(x); return isNaN(t)?SP_lastRemoteTs:t; })(remote.updated_at || remote.updatedAt);
-          Persist.save(remote.data || $&);
-        }
-      })();
-    }
-  } catch(_) {}
-});
-
-document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
-
-
+async function SP_saveServer(state){ try { await backendSaveScanState(state); return true; } catch(e){ return false; } }
+async function SP_loadServer(){ try { return await backendFetchScanState(); } catch(e){ return null; } } catch(e){ return null; } }
 window.clearBackendScanState = backendClearScanState;
 </script>
 <div id="sp-debug" style="position:fixed;right:8px;bottom:8px;font:12px/1.2 monospace;color:#9ff;background:rgba(0,20,40,.6);border:1px solid rgba(0,255,255,.2);padding:6px 8px;border-radius:8px;z-index:9999">
@@ -1742,7 +1579,7 @@ window.addEventListener('beforeunload', () => {
     const s = Persist.load();
     if (!s) return;
     const data = JSON.stringify({ data: s });
-    const url = ((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/scan-state');
+    const url = ((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state');
     navigator.sendBeacon(url, data);
   } catch {}
 });
