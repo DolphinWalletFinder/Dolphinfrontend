@@ -1403,12 +1403,19 @@ if (Core.walletsTotal) {
 
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
   addEventListener('beforeunload', ()=>{
-  const payload = {
-    elapsed: Core.elapsedMs,
-    total:   Core.walletsTotal,
-    core: { elapsedMs: Core.elapsedMs, walletsTotal: Core.walletsTotal }
-  };
-  Persist.save(payload);
+  try{
+    const s = (typeof SP_collect==='function') ? SP_collect() : null;
+    const token = localStorage.getItem('token');
+    if (s && token) {
+      s.updatedAt = Date.now();
+      fetch((typeof SP_API_BASE==='string'&&SP_API_BASE?SP_API_BASE:API_BASE) + '/scan/state', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ state: s }),
+        keepalive: true
+      });
+    }
+  }catch(_){}
 });
 
  startConnectivityWatchdog();
@@ -1478,7 +1485,7 @@ async function SP_loadServer(){
     });
     if (!res.ok) return null;
     const j = await res.json();
-    return (j && j.state) || null;
+    return j || null;
   }catch(e){ return null; }
 }
 
@@ -1518,12 +1525,16 @@ function SP_schedule(){ if (!SP_bootstrapDone) return; SP_dirty=true; clearTimeo
 
 async function SP_restore(){
   let remote = await SP_loadServer();
-  if (remote && remote.state) {
-    SP_lastRemoteTs = remote.updatedAt || 0;
+  let state = null;
+  if (remote && remote.state) {           // shape {state, updated_at}
+    SP_lastRemoteTs = remote.updated_at || remote.updatedAt || 0;
     SP_Local.save(remote.state);
     state = remote.state;
+  } else if (remote) {                    // server returned plain state
+    state = remote;
+    SP_Local.save(state);
   } else {
-    var state = SP_Local.load();
+    state = SP_Local.load();
   }
   if (!state) return;
   try{
