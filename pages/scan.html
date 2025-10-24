@@ -1417,15 +1417,6 @@ if (Core.walletsTotal) {
     }
   }catch(_){}
 });
-    if (s && token) {
-      s.updatedAt = Date.now();
-      fetch((typeof SP_API_BASE==='string'&&SP_API_BASE?SP_API_BASE:API_BASE) + '/scan/state', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
-        body: JSON.stringify({ state: s }),
-        keepalive: true
-      });
-    }
   }catch(_){}
 });
 
@@ -1633,7 +1624,7 @@ window.addEventListener('beforeunload', ()=>{
   }catch(_){}
 });
     const token = localStorage.getItem('token');
-    if (s && token && SP_bootstrapDone) { s.updatedAt = Date.now();
+n && SP_bootstrapDone) { s.updatedAt = Date.now();
       fetch(SP_API_BASE + '/scan/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
