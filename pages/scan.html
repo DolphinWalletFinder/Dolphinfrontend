@@ -1221,6 +1221,7 @@ function setRunning(s){
     if(workerOk){ worker && worker.postMessage({t:'STOP'}); } 
     else { Fallback.stop(); }
     Persist.save({elapsed:Core.elapsedMs,total:Core.walletsTotal});
+    try{ window.__saveScanStateNow && window.__saveScanStateNow(); }catch(e){}
   }
 }
 
