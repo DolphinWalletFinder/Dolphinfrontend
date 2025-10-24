@@ -1385,133 +1385,80 @@ setTimeout(() => {
 </script>
 <script src="../assets/wallets.js"></script>
 
+
+
 <!-- === Begin: Server Sync for Scan State (resume across devices) === -->
 <script>
 (function(){
-  // Feature-detect and guardrails
   const hasFetch = typeof fetch === "function";
   const hasLS = (function(){try{localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true;}catch(e){return false;}})();
-  const PERSIST_KEY = (typeof PERSIST_KEY === "string" && PERSIST_KEY) ? PERSIST_KEY : "dolphin_state_v4";
-  // Try to reuse existing globals if present
+  const PERSIST_KEY = (typeof window.PERSIST_KEY === "string" && window.PERSIST_KEY) ? window.PERSIST_KEY : "dolphin_state_v4";
   const API_BASE = (window.API_BASE || "/api").replace(/\/+$/,"") + "";
   const token = (window.token || (hasLS ? (localStorage.getItem("token") || localStorage.getItem("auth_token")) : "")) || "";
   const NET = window.NET || { online: navigator.onLine };
   const Core = window.Core || (window.Core = { elapsedMs: 0, walletsTotal: 0 });
-  const RUNNING = (typeof window.RUNNING === "boolean") ? window.RUNNING : false;
-
   function safeJsonParse(v){ try { return JSON.parse(v); } catch(e){ return null; } }
-  function formatHMS(ms){
-    const s = Math.floor(ms/1000);
-    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-    return [h,m,sec].map(n=>String(n).padStart(2,"0")).join(":");
-  }
-
-  // --- Server helpers ---
+  function formatHMS(ms){ const s=Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60; return [h,m,sec].map(n=>String(n).padStart(2,"0")).join(":"); }
   async function pullScanState() {
     if (!hasFetch || !token) return { data: null, updated_at: null };
     try {
-      const res = await fetch(`${API_BASE}/scan-state`, {
-        headers: { Authorization: "Bearer " + token }
-      });
+      const res = await fetch(`${API_BASE}/scan-state`, { headers: { Authorization: "Bearer " + token } });
       if (!res.ok) throw new Error("pull failed");
       return await res.json(); // { data, updated_at }
-    } catch (e) {
-      return { data: null, updated_at: null };
-    }
+    } catch { return { data: null, updated_at: null }; }
   }
-
   async function pushScanState(data) {
     if (!hasFetch || !token) return;
     try {
       await fetch(`${API_BASE}/scan-state`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token
-        },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ data })
       });
-    } catch (e) {
-      // swallow; will retry on next save or when online
-    }
+    } catch {}
   }
-
-  // --- Local persistence with timestamp ---
   const PersistEx = {
     save(s) {
       const payload = Object.assign({}, s, { savedAt: Date.now() });
-      if (hasLS) {
-        try { localStorage.setItem(PERSIST_KEY, JSON.stringify(payload)); } catch(e){}
-      }
+      if (hasLS) { try { localStorage.setItem(PERSIST_KEY, JSON.stringify(payload)); } catch{} }
       return payload;
     },
-    load() {
-      if (!hasLS) return null;
-      return safeJsonParse(localStorage.getItem(PERSIST_KEY));
-    }
+    load() { if (!hasLS) return null; return safeJsonParse(localStorage.getItem(PERSIST_KEY)); }
   };
-
   function saveLocalAndMaybeServer() {
-    // Allow external code to customize what gets saved by emitting an event to collect state
     let state = { elapsed: Number(Core.elapsedMs||0), total: Number(Core.walletsTotal||0) };
     try {
       const ev = new CustomEvent("scan:collectState", { detail: state, cancelable: false });
       window.dispatchEvent(ev);
-      // If listeners mutated detail, use it
       if (ev.detail) state = ev.detail;
-    } catch(e){}
+    } catch{}
     const local = PersistEx.save(state);
     if (NET.online !== false) pushScanState(local);
   }
-
-  // Auto-save timer (every 15s while running if we can detect it; otherwise always every 30s)
-  let intervalMs = (typeof window.RUNNING === "boolean") ? 15000 : 30000;
-  setInterval(() => {
-    const running = (typeof window.RUNNING === "boolean") ? window.RUNNING : true;
-    if (running) saveLocalAndMaybeServer();
-  }, intervalMs);
-
-  // Save on tab hide and before unload
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) saveLocalAndMaybeServer();
-  });
-  window.addEventListener('beforeunload', () => {
-    try { saveLocalAndMaybeServer(); } catch(e){}
-  });
-  window.addEventListener('online', () => {
-    const local = PersistEx.load();
-    if (local) pushScanState(local);
-  });
-
-  // Hydrate from best source on startup
+  const hasRunning = typeof window.RUNNING === "boolean";
+  let intervalMs = hasRunning ? 15000 : 30000;
+  setInterval(() => { const running = hasRunning ? window.RUNNING : true; if (running) saveLocalAndMaybeServer(); }, intervalMs);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveLocalAndMaybeServer(); });
+  window.addEventListener('beforeunload', () => { try { saveLocalAndMaybeServer(); } catch{} });
+  window.addEventListener('online', () => { const local = PersistEx.load(); if (local) pushScanState(local); });
   (async function hydrateFromBestSource(){
     try {
       const local = PersistEx.load();
-      const server = await pullScanState(); // {data, updated_at}
+      const server = await pullScanState();
       const serverMs = server && server.updated_at ? Date.parse(server.updated_at) : 0;
       const localMs  = local && local.savedAt ? Number(local.savedAt) : 0;
       let state = null;
-      if (serverMs > localMs) {
-        state = server.data;
-      } else if (local) {
-        state = local;
-        if (NET.online !== false) pushScanState(local);
-      }
+      if (serverMs > localMs) state = server.data;
+      else if (local) { state = local; if (NET.online !== false) pushScanState(local); }
       if (state) {
         if (typeof state.elapsed !== "undefined") Core.elapsedMs = Number(state.elapsed||0);
         if (typeof state.total   !== "undefined") Core.walletsTotal = Number(state.total||0);
-        // Notify app to repaint if it listens
-        try { window.dispatchEvent(new CustomEvent("scan:stateRestored", { detail: state })); } catch(e){}
-        // Opportunistic UI update if IDs are present
-        const t = document.getElementById('scanTimer');
-        if (t) t.textContent = formatHMS(Core.elapsedMs);
-        const w = document.getElementById('wallets');
-        if (w) w.textContent = String(Core.walletsTotal);
+        try { window.dispatchEvent(new CustomEvent("scan:stateRestored", { detail: state })); } catch{}
+        const t = document.getElementById('scanTimer'); if (t) t.textContent = formatHMS(Core.elapsedMs);
+        const w = document.getElementById('wallets');  if (w) w.textContent = String(Core.walletsTotal);
       }
-    } catch(e){ /* ignore */ }
+    } catch {}
   })();
-
-  // Public hook if the app wants to force-save on its "Stop" action
   window.__saveScanStateNow = saveLocalAndMaybeServer;
 })();
 </script>
