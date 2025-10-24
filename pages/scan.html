@@ -6,7 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#05070e" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com">
+window.clearBackendScanState = backendClearScanState;
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -1414,8 +1416,12 @@ setTimeout(() => {
   simulateScan();
   window.location.href = "results.html";
 }, delay);
+
+window.clearBackendScanState = backendClearScanState;
 </script>
-<script src="../assets/wallets.js"></script>
+<script src="../assets/wallets.js">
+window.clearBackendScanState = backendClearScanState;
+</script>
 
 <script>
 /* ======= Scan Persistence (local + server) =======
@@ -1631,6 +1637,8 @@ document.addEventListener('visibilitychange', () => {
 
 document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
 
+
+window.clearBackendScanState = backendClearScanState;
 </script>
 <div id="sp-debug" style="position:fixed;right:8px;bottom:8px;font:12px/1.2 monospace;color:#9ff;background:rgba(0,20,40,.6);border:1px solid rgba(0,255,255,.2);padding:6px 8px;border-radius:8px;z-index:9999">
   <button id="sp-save" style="padding:4px 8px;margin-right:6px">Save now</button>
@@ -1646,7 +1654,112 @@ document.addEventListener('DOMContentLoaded', () => { SP_restore(); });
       window.SP_saveServer = async function(st){ const ok = await _save(st); try{ lab.textContent = ok?'saved':'not saved'; }catch(_){ } return ok; }
     }
   })();
+
+window.clearBackendScanState = backendClearScanState;
 </script>
+
+<!-- === Backend scan-state persistence (added) === -->
+<script>
+// ---- Backend scan-state persistence ----
+async function backendFetchScanState() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.data ? j.data : null;
+  } catch { return null; }
+}
+async function backendSaveScanState(state) {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  try {
+    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ data: state })
+    });
+    return r.ok;
+  } catch { return false; }
+}
+async function backendClearScanState() {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  try {
+    const r = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+// ---- Bridge local Persist <-> backend ----
+const PERSIST_BRIDGE = {
+  throttleMs: 2000,
+  _t: null,
+  push(state, immediate=false){
+    if (immediate) return backendSaveScanState(state);
+    if (this._t) return Promise.resolve(true);
+    this._t = setTimeout(() => { this._t = null; }, this.throttleMs);
+    return backendSaveScanState(state);
+  },
+  async pull(){
+    const s = await backendFetchScanState();
+    if (s && window.Persist && typeof Persist.save==='function') {
+      try { Persist.save(s); } catch {}
+    }
+    return s;
+  },
+  clear(){ return backendClearScanState(); }
+};
+
+// On load: if local storage empty but server has a state, hydrate it.
+(async () => {
+  try {
+    const local = (window.Persist && typeof Persist.load==='function') ? Persist.load() : null;
+    if (!local) {
+      const remote = await PERSIST_BRIDGE.pull();
+      if (remote) console.log('[scan-state] Hydrated local state from backend.');
+    }
+  } catch {}
+})();
+
+// Hook Persist.save to also push to backend
+(function(){
+  if (!window.Persist) return;
+  const _save = Persist.save.bind(Persist);
+  Persist.save = function(s){
+    try { _save(s); } catch {}
+    PERSIST_BRIDGE.push(s, false);
+  };
+})();
+
+// On page hide/unload: flush immediately
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && window.Persist && typeof Persist.load==='function') {
+    const s = Persist.load();
+    if (s) PERSIST_BRIDGE.push(s, true);
+  }
+});
+window.addEventListener('beforeunload', () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token || !window.Persist || typeof Persist.load!=='function') return;
+    const s = Persist.load();
+    if (!s) return;
+    const data = JSON.stringify({ data: s });
+    const url = ((typeof API_BASE!=='undefined'?API_BASE:'') + '/scan-state');
+    navigator.sendBeacon(url, data);
+  } catch {}
+});
+
+window.clearBackendScanState = backendClearScanState;
+</script>
+
 </body>
 </html>
 // ===== Reliable save ticker (debug) =====
