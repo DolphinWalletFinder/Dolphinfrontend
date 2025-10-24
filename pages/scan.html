@@ -20,9 +20,7 @@ if (typeof window.backendFetchScanState !== 'function') {
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#05070e" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
-<script src="https://cdn.tailwindcss.com">
-window.clearBackendScanState = backendClearScanState;
-</script>
+<script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -504,7 +502,7 @@ const Matrix = {
       const W=L.canvas.clientWidth;
       L.font=Math.max(13,(W/88)|0)*L.fontMul; L.colW=(L.font*1.08)|0; L.ctx.font=`${L.font}px ui-monospace,monospace`;
       L.cols=Math.max(12,(W/L.colW)|0);
-      L.data || $&=Array(L.cols).fill(0).map(()=>({
+      L.data = (L.data || Array(L.cols).fill(0).map(()=>({
         y: Math.floor(Math.random()*(L.canvas.clientHeight/L.font)),
         v: rand(L.speed[0],L.speed[1]),
         tail: randi(10,16),
@@ -539,7 +537,7 @@ const Matrix = {
       const H=L.canvas.clientHeight, ctx=L.ctx, font=L.font, colW=L.colW;
       ctx.textBaseline='top';
       for(let i=0;i<L.cols;i++){
-        const s=L.data || $&[i];
+        const s = L.data[i];
         const x=i*colW+2+Math.sin((s.y*0.05)+time*0.8)*2;
 
         // faint bar behind the column head
