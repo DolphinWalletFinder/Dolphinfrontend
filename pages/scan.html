@@ -1402,23 +1402,6 @@ if (Core.walletsTotal) {
   if(worker){ worker.onmessage=(e)=>{ const d=e.data; if(d.t==='S'){ Core.walletsTotal=d.total|0; Core.elapsedMs=d.elapsed|0; walletsEl.textContent=formatCount(Core.walletsTotal); fitTextId(walletsEl); } }; worker.postMessage({t:'SYNC',total:Core.walletsTotal,elapsed:Core.elapsedMs}); }
 
   addEventListener('resize',()=>{ setSizeRadar(); drawHexGrid(); drawPolar(); drawRings(); drawGlow(); sizeMatrix(); drawLine(); sizeMev(); drawMev(); FIT_IDS.forEach(id=>fitTextId($(id))); });
-  addEventListener('beforeunload', ()=>{
-  try{
-    const st = (typeof SP_collect==='function') ? SP_collect() : null;
-    const token = localStorage.getItem('token');
-    if (st && token) {
-      st.updatedAt = Date.now();
-      fetch(SP_API_BASE + '/scan/state', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
-        body: JSON.stringify({ state: st }),
-        keepalive: true
-      });
-    }
-  }catch(_){}
-});
-  }catch(_){}
-});
 
  startConnectivityWatchdog();
 }
@@ -1621,18 +1604,7 @@ window.addEventListener('beforeunload', ()=>{
         keepalive: true
       });
     }
-  }catch(_){}
-});
-    const token = localStorage.getItem('token');
-n && SP_bootstrapDone) { s.updatedAt = Date.now();
-      fetch(SP_API_BASE + '/scan/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ state: s }),
-        keepalive: true
-      });
-    }
-  } catch (_) {}
+  }catch(_){ }
 });
 
 document.addEventListener('visibilitychange', () => {
