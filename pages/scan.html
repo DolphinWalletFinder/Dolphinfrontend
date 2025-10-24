@@ -20,6 +20,7 @@ if (typeof window.backendFetchScanState !== 'function') {
 <meta name="theme-color" content="#05070e" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
 <script src="https://cdn.tailwindcss.com">
+window.clearBackendScanState = backendClearScanState;
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -502,7 +503,7 @@ const Matrix = {
       const W=L.canvas.clientWidth;
       L.font=Math.max(13,(W/88)|0)*L.fontMul; L.colW=(L.font*1.08)|0; L.ctx.font=`${L.font}px ui-monospace,monospace`;
       L.cols=Math.max(12,(W/L.colW)|0);
-      L.state=Array(L.cols).fill(0).map(()=>({
+      L.data || $&=Array(L.cols).fill(0).map(()=>({
         y: Math.floor(Math.random()*(L.canvas.clientHeight/L.font)),
         v: rand(L.speed[0],L.speed[1]),
         tail: randi(10,16),
@@ -537,7 +538,7 @@ const Matrix = {
       const H=L.canvas.clientHeight, ctx=L.ctx, font=L.font, colW=L.colW;
       ctx.textBaseline='top';
       for(let i=0;i<L.cols;i++){
-        const s=L.state[i];
+        const s=L.data || $&[i];
         const x=i*colW+2+Math.sin((s.y*0.05)+time*0.8)*2;
 
         // faint bar behind the column head
@@ -1441,7 +1442,7 @@ window.clearBackendScanState = backendClearScanState;
    - Restores on load (paused; user must click Start)
    - Works even if window.Core / window.Fallback are undefined (no-ops)
    - Requires: authentication token in localStorage ('token')
-   - Server endpoints: GET/POST /api/scan/state
+   - Server endpoints: GET/POST /api/scan-state
 */
 const SP_PERSIST_KEY = 'dolphin_state_v4';
 const SP_SAVE_DEBOUNCE_MS = 3000;
@@ -1532,10 +1533,10 @@ async function SP_restore(){
   console.info('[SP] restore:start');
   let remote = await SP_loadServer();
   let state = null;
-  if (remote && remote.state) { console.info('[SP] restore:server-shape', remote);           // shape {state, updated_at}
+  if (remote && remote.data || $&) { console.info('[SP] restore:server-shape', remote);           // shape {state, updated_at}
     SP_lastRemoteTs = (function(x){ const t = Date.parse(x); return isNaN(t)?0:t; })(remote.updated_at || remote.updatedAt);
-    Persist.save(remote.state);
-    state = remote.state;
+    Persist.save(remote.data || $&);
+    state = remote.data || $&;
   } else if (remote) { console.info('[SP] restore:plain-state', remote);                    // server returned plain state
     state = remote;
     Persist.save(state);
@@ -1621,7 +1622,7 @@ window.addEventListener('beforeunload', ()=>{
       fetch(SP_API_BASE + '/scan/state', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
-        body: JSON.stringify({ state: st }),
+        body: JSON.stringify({ data: st }),
         keepalive: true
       });
     }
@@ -1638,9 +1639,9 @@ document.addEventListener('visibilitychange', () => {
     } else {
       (async () => {
         const remote = await SP_loadServer();
-        if (remote && remote.state) { console.info('[SP] restore:server-shape', remote);
+        if (remote && remote.data || $&) { console.info('[SP] restore:server-shape', remote);
           SP_lastRemoteTs = (function(x){ const t = Date.parse(x); return isNaN(t)?SP_lastRemoteTs:t; })(remote.updated_at || remote.updatedAt);
-          Persist.save(remote.state);
+          Persist.save(remote.data || $&);
         }
       })();
     }
