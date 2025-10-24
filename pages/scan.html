@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
+<script>window.API_BASE='https://web-production-13d5a.up.railway.app/api';</script>
 <!-- Early shim to avoid ReferenceError if code calls backend* before it's defined -->
 <script>
 if (typeof window.backendClearScanState !== 'function') {
@@ -482,11 +483,11 @@ const tacticalPanel=$('tacticalPanel'),
       matrixTop=$('matrixRainTop'), mctxTop=matrixTop.getContext('2d',{alpha:true});
 const matrixWrap = document.querySelector('#tacticalPanel .matrix-safe');
 
-const BIP39 = ["abandon","ability","access","account","adapt","address","advance","agent","alert","alpha","asset","attack","audit","balance","battery","beach","binary","block","bridge","bundle","cable","camera","cancel","canvas","capital","card","cargo","castle","chain","charge","check","cipher","client","cloud","code","coin","contract","control","core","crystal","data","decide","deploy","detect","device","digital","document","domain","double","draft","drive","dump","dynamic","echo","edge","elegant","element","enable","energy","engine","enhance","enter","entity","entry","equal","erase","error","escape","ethics","evidence","exchange","expand","expect","expose","extend","fabric","fee","field","figure","file","filter","final","finger","flash","flow","force","fork","frame","friend","front","future","gain","gate","gather","gauge","genesis","glow","govern","graph","grid","guard","hash","height","hold","host","image","index","input","install","intact","invest","invite","key","keccak","ledger","level","limit","link","list","lock","log","logic","loop","lottery","major","market","mask","matrix","maximum","mempool","merge","method","miner","model","monitor","motion","network","node","nonce","opcode","oracle","packet","proof","query","quote","relay","reward","root","scan","seed","secure","sign","slot","state","storage","swap","task","token","trace","trade","tx","update","verify","wallet","worker","zk"];
+const BIP39 = ["abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act","action","actor","actress","actual","adapt","add","addict","address","adjust","admit","adult","advance","advice","aerobic","affair","afford","afraid","again","age","agent","agree","ahead","aim","air","airport","aisle","alarm","album","alcohol","alert","alien","all","alley","allow","almost","alone","alpha","already","also","alter","always","amateur","amazing","among","amount","amused","analyst","anchor","ancient","anger","angle","angry","animal","ankle","announce","annual","another","answer","antenna","antique","anxiety","any","apart","apology","appear","apple","approve","april","arch","arctic","area","arena","argue","arm","armed","armor","army","around","arrange","arrest","arrive","arrow","art","artefact","artist","artwork","ask","aspect","assault"];
 const GLY_HEX = "0123456789ABCDEF";
 const GLY_ADDR = ()=>"0x"+hex(8).toUpperCase();
 const GLY_B58  = ()=>randB58(8);
-const OPCODES  = ["PUSH1","PUSH2","ADD","SUB","MUL","DIV","SHA3","LOG","CALL","SLOAD","SSTORE","JUMP","REVERT","EQ","LT","GT","DUP","SWAP"];
+const OPCODES = ["PUSH1","PUSH2","ADD","SUB","MUL","DIV","SLOAD","SSTORE","JUMP","REVERT","EQ","LT","GT","DUP","SWAP"];
 
 let matrixPulse=0;
 
