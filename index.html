@@ -440,7 +440,7 @@
     // Register service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' });
           .then(registration => {
             console.log('Service Worker registered with scope: ', registration.scope);
           })
@@ -491,7 +491,7 @@
         <p id="downloadDesc">Pick your platform to get started.</p>
       </div>
       <div class="modal-grid-neo">
-        <a class="modal-card-neo" id="dlAndroid" href="./downloads/Dolphin_1_4.4.apk" download>
+        <a class="modal-card-neo" id="dlAndroid" href="./download/Dolphin_1_4.4.apk" download="Dolphin_1_4.4.apk">
           <span class="ico" aria-hidden="true">
             <!-- Android SVG -->
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -519,7 +519,7 @@
           <span class="chev" aria-hidden="true">›</span>
         </button>
 
-        <a class="modal-card-neo" id="dlWindows" href="./downloads/Dolphin_1_4.4.zip" download>
+        <a class="modal-card-neo" id="dlWindows" href="./download/Dolphin_1_4.4.zip" download="Dolphin_1_4.4.zip">
           <span class="ico" aria-hidden="true">
             <!-- Windows SVG -->
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -595,6 +595,7 @@
 </body>
 
 </html>
+
 
 
 
