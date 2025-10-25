@@ -192,7 +192,64 @@
     .stores-strip{ padding:14px; }
     .store-badge{ width:100%; min-width:0; }
   }
-  </style>
+  
+  /* ===== Direct Download modal ===== */
+  .stores-actions{ display:flex; justify-content:flex-start; }
+  .btn-direct-download{ min-width:unset; padding-inline:18px; height:48px; border-radius:14px; font-size:1rem; }
+
+  .modal-backdrop{
+    position:fixed; inset:0; display:none; place-items:center;
+    background:rgba(0,8,16,.62);
+    backdrop-filter: blur(6px);
+    z-index:1000;
+  }
+  .modal-backdrop[aria-hidden="false"]{ display:grid; }
+  .modal{
+    position:relative;
+    width:min(720px,92vw);
+    background:linear-gradient(180deg, rgba(6,12,20,.95), rgba(8,16,28,.95));
+    border:1px solid rgba(64,203,255,.35);
+    border-radius:20px;
+    box-shadow: var(--shadow-lg);
+    padding:20px;
+    outline:none;
+  }
+  .modal h3{
+    margin:6px 0 4px;
+    font-size:clamp(18px,2.2vw,24px);
+    font-weight:900;
+    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3));
+    -webkit-background-clip:text; color:transparent;
+  }
+  .modal-kicker{ color:var(--muted); margin:0 0 14px; }
+  .modal-grid{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;
+  }
+  @media (max-width:820px){ .modal-grid{ grid-template-columns:1fr; } }
+  .modal-card{
+    text-decoration:none; text-align:left;
+    background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13));
+    border:1px solid rgba(64,203,255,.28);
+    border-radius:14px; padding:14px;
+    display:flex; gap:12px; align-items:flex-start; cursor:pointer;
+    color:var(--text);
+  }
+  .modal-card:hover{ transform:translateY(-1px); }
+  .modal-emoji{ font-size:26px; line-height:1; }
+  .modal-title{ font-weight:900; }
+  .modal-sub{ color:var(--muted); font-size:.95rem; }
+
+  .modal-close{
+    position:absolute; top:10px; right:10px;
+    height:36px; width:36px; border-radius:12px; border:1px solid rgba(64,203,255,.28);
+    background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13));
+    color:var(--text); cursor:pointer;
+  }
+  .pwa-steps{ margin-top:14px; border-top:1px dashed rgba(64,203,255,.28); padding-top:10px; }
+  .pwa-steps ol{ margin:0 0 8px 18px; }
+  .pwa-note{ color:var(--muted); margin:0; font-size:.95rem; }
+
+</style>
 </head>
 <body>
   <div class="radar">
@@ -254,6 +311,12 @@
           <div class="stores-wrap">
             <div class="stores-strip" role="region" aria-label="Coming soon to marketplaces">
               <div class="stores-text">Coming soon on top marketplaces</div>
+              <div class="stores-actions">
+                <button class="cta btn-now btn-direct-download" type="button" id="openDirectDownload">
+                  <span class="icon" aria-hidden="true">⬇️</span> Direct download
+                </button>
+              </div>
+
               <div class="store-badges">
                 <button class="store-badge" type="button" disabled aria-disabled="true" title="Coming soon">
                   <img src="assets/google-play-badge.png" alt="Google Play badge" loading="lazy" decoding="async" />
@@ -349,7 +412,110 @@
     const APP_VERSION = "v1.4.4";
     const verEl = document.getElementById("appVersion");
     if (verEl) verEl.textContent = APP_VERSION;
-  </script>
+  
+    
+    // === GitHub release links config ===
+    // Set this to your GitHub "owner/repo", e.g., "acme/dolphin-wallet-finder"
+    const GITHUB_REPO = 'OWNER/REPO';
+    const ASSETS = {
+      android: 'DolphinWalletFinder-Android.apk', // change if your asset file name differs
+      windows: 'DolphinWalletFinder-Windows.exe'  // change if your asset file name differs
+    };
+    (function configureGitHubLinks(){
+      try{
+        const base = `https://github.com/${GITHUB_REPO}`;
+        const latest = `${base}/releases/latest/download/`;
+        const a = document.getElementById('dlAndroid');
+        const w = document.getElementById('dlWindows');
+        const r = document.getElementById('dlRepo');
+        if(a) a.href = latest + ASSETS.android;
+        if(w) w.href = latest + ASSETS.windows;
+        if(r) r.href = base;
+      }catch(e){ console.warn('GitHub links not configured:', e); }
+    })();
+
+    // === Direct download modal logic ===
+    (function(){
+      const openBtn = document.getElementById('openDirectDownload');
+      const modal = document.getElementById('downloadModal');
+      const dialog = modal ? modal.querySelector('.modal') : null;
+      const closeBtn = document.getElementById('closeDirectDownload');
+      const pwaBtn = document.getElementById('pwaIosHelp');
+      const pwaSteps = document.getElementById('pwaSteps');
+      let lastFocus = null;
+
+      function openModal(){
+        if(!modal) return;
+        lastFocus = document.activeElement;
+        modal.setAttribute('aria-hidden','false');
+        setTimeout(()=>{ dialog && dialog.focus(); }, 0);
+        document.body.style.overflow = 'hidden';
+      }
+      function closeModal(){
+        if(!modal) return;
+        modal.setAttribute('aria-hidden','true');
+        document.body.style.overflow = '';
+        if(lastFocus) lastFocus.focus();
+        if(pwaSteps) pwaSteps.hidden = true;
+      }
+
+      if(openBtn){ openBtn.addEventListener('click', openModal); }
+      if(closeBtn){ closeBtn.addEventListener('click', closeModal); }
+      if(modal){
+        modal.addEventListener('click', (e)=>{
+          if(e.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', (e)=>{
+          if(e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false'){ closeModal(); }
+        });
+      }
+      if(pwaBtn && pwaSteps){
+        pwaBtn.addEventListener('click', ()=>{
+          pwaSteps.hidden = !pwaSteps.hidden;
+          if(!pwaSteps.hidden){
+            pwaBtn.scrollIntoView({behavior:'smooth', block:'nearest'});
+          }
+        });
+      }
+    })();
+
+</script>
+
+  <!-- Direct Download Modal -->
+  <div class="modal-backdrop" id="downloadModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="downloadTitle" aria-describedby="downloadDesc" tabindex="-1">
+      <button class="modal-close" type="button" id="closeDirectDownload" aria-label="Close">✕</button>
+      <h3 id="downloadTitle">Direct download</h3>
+      <p id="downloadDesc" class="modal-kicker">Choose your platform to get started.</p>
+      <div class="modal-grid">
+        <a class="modal-card" id="dlAndroid" href="/downloads/app-android.apk" download download>
+          <div class="modal-emoji" aria-hidden="true">🤖</div>
+          <div class="modal-title">Android (APK)</div>
+          <div class="modal-sub">Download APK and allow installs from browser/files.</div>
+        </a>
+        <button class="modal-card" type="button" id="pwaIosHelp">
+          <div class="modal-emoji" aria-hidden="true">🍎</div>
+          <div class="modal-title">iPhone (PWA)</div>
+          <div class="modal-sub">Install to Home Screen from Safari. Tap to see steps.</div>
+        </button>
+        <a class="modal-card" id="dlWindows" href="/downloads/app-windows.exe" download download>
+          <div class="modal-emoji" aria-hidden="true">🪟</div>
+          <div class="modal-title">Windows (.exe)</div>
+          <div class="modal-sub">Standard installer for Windows 10/11.</div>
+        </a>
+      </div>
+
+      <div class="pwa-steps" id="pwaSteps" hidden>
+        <ol>
+          <li>Open this site in <strong>Safari</strong> on your iPhone.</li>
+          <li>Tap the <strong>Share</strong> icon (square with arrow).</li>
+          <li>Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+        </ol>
+        <p class="pwa-note">Tip: Enable notifications after first launch if prompted.</p>
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>
