@@ -56,7 +56,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // 💾 Never cache large direct downloads; let network/CDN stream them
-  if (url.pathname.startsWith("/downloads/")) {
+  if (url.pathname.startsWith("/download/")) {
     return; // don't intercept
   }
 
