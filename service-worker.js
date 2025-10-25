@@ -1,7 +1,8 @@
 // service-worker.js
 
-const CACHE_NAME = "dolphin-cache-v4";
+const CACHE_NAME = "dolphin-cache-v5";
 const APP_SHELL = [
+  "/manifest.json",
   "/",
   "/index.html",
   "/pages/login.html",
@@ -48,6 +49,16 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
+
+  // 🔒 Always let the browser handle Range requests (video/download resume)
+  if (req.headers.has("range")) {
+    return; // don't intercept
+  }
+
+  // 💾 Never cache large direct downloads; let network/CDN stream them
+  if (url.pathname.startsWith("/downloads/")) {
+    return; // don't intercept
+  }
 
   // 0) Never handle non-GET (POST/PUT/PATCH/DELETE/beacon, etc.)
   if (req.method !== "GET") return;
