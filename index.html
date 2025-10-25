@@ -317,6 +317,53 @@
 .pwa-steps ol{ margin:0 0 8px 18px; }
 .pwa-note{ color:var(--muted, #9fb3c8); margin:0; font-size:.95rem; }
 
+ /* === Make "Direct download" visually match store badges (desktop + mobile) === */
+
+/* Let the direct-download button sit alongside the store badges */
+.store-badges .stores-actions{
+  display: contents;
+}
+
+/* Match size and look of .store-badge */
+.store-badges .btn-direct-download{
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+
+  /* Dimensions aligned with .store-badge */
+  height: auto;            /* override fixed height from .cta, if any */
+  padding: 10px 14px;
+  min-width: 260px;
+  border-radius: 14px;
+  border: 1px solid rgba(64,203,255,.28);
+  background: linear-gradient(110deg, rgba(0,255,255,.10), rgba(0,40,110,.18));
+  box-shadow: none;
+
+  /* Typography consistent with badges */
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Icon inside the direct-download button */
+.store-badges .btn-direct-download .icon{
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+}
+
+/* Responsive: full width on small screens like the badges */
+@media (max-width: 600px){
+  .store-badges .btn-direct-download{
+    width: 100%;
+    min-width: 0;
+  }
+}
+   
 </style>
 </head>
 <body>
@@ -595,6 +642,7 @@
 </body>
 
 </html>
+
 
 
 
