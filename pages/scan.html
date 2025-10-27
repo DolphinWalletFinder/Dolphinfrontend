@@ -219,12 +219,19 @@
     </div>
   </header>
 
-  <!-- Control Bar -->
-  <section class="relative z-10 max-w-[1200px] mx-auto px-4 mt-4">
-    <div id="controlBar" class="control-bar px-4 py-3 flex items-center justify-center gap-3">
-      <button id="btnStart" class="btn" aria-pressed="false">Start</button>
-      <button id="btnStop" class="btn opacity-50 pointer-events-none" aria-pressed="true">Stop</button>
-    </div>
+ <!-- Control Bar -->
+<section class="relative z-10 max-w-[1200px] mx-auto px-4 mt-4">
+  <!-- Warning message above the buttons -->
+  <p class="flex items-center justify-center text-center text-cyan-200/80 text-sm mb-2 gap-2 px-2">
+    <span class="text-cyan-400" aria-hidden="true">★</span>
+    <span>To avoid data loss, please perform the scan on only one device.</span>
+  </p>
+
+  <div id="controlBar" class="control-bar px-4 py-3 flex items-center justify-center gap-3">
+    <button id="btnStart" class="btn" aria-pressed="false">Start</button>
+    <button id="btnStop" class="btn opacity-50 pointer-events-none" aria-pressed="true">Stop</button>
+  </div>
+</section>
 
      <!-- Net Alert -->
   <div id="netAlert"
