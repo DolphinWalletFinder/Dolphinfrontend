@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
-  <!-- App-like, responsive, no zoom -->
+  <!-- App-like, responsive, no zoom, safe areas, keyboard-safe on mobile -->
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
@@ -22,9 +22,10 @@
     --shadow-lg:0 28px 90px rgba(0,0,0,.65);
   }
 
-  /* Reset + layout primitives */
+  /* Reset + layout */
   *{box-sizing:border-box}
   html,body{height:100%}
+  html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   html, body{
     margin:0; color:var(--text);
     font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -39,27 +40,22 @@
     overflow-x:hidden;
     overflow-y:auto;
     overscroll-behavior-x:none;
+
     -webkit-tap-highlight-color:transparent;
 
-    /* Allow only vertical pan (blocks pinch/double-tap zoom gestures on modern browsers) */
+    /* Prevent pinch/double-tap zoom; allow only vertical pan */
     touch-action: pan-y;
   }
-
-  /* Disable text-size adjust auto-zoom on iOS */
-  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-
-  /* Ensure interactive elements don't trigger double-tap zoom */
-  a, button { touch-action: manipulation; }
 
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
 
-  /* Stage: EXACT center on all viewports (iOS/Android/desktop) */
+  /* Exact center on all devices, safe-area aware */
   .stage{
-    min-height:100dvh;         /* dynamic viewport (iOS 16+) */
-    min-height:100svh;         /* small viewport (keyboard-safe) */
+    min-height:100dvh; /* dynamic viewport (iOS/Android) */
+    min-height:100svh; /* keyboard-safe fallback */
     display:grid;
-    place-items:center;        /* centers both axes */
+    place-items:center; /* centers both axes */
     padding:
       calc(env(safe-area-inset-top,0px) + clamp(16px,3vw,32px))
       clamp(16px,3vw,32px)
@@ -67,17 +63,16 @@
     position:relative; z-index:2;
   }
 
-  /* Shell stays centered & responsive like a native app card */
+  /* Shell stays centered like an app card */
   .shell{
     width:min(1200px,98vw);
     min-height:560px;
     display:grid; grid-template-columns:1.05fr 1.45fr;
     border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
-
-    margin:auto;               /* hard center fallback */
-    place-self:center;         /* grid center insurance */
-
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+
+    margin-inline:auto;   /* horizontal center fallback */
+    place-self:center;    /* grid center insurance */
   }
   @media (max-width:980px){ .shell{ grid-template-columns:1fr; min-height:unset } }
 
@@ -146,8 +141,8 @@
   .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; max-width:100%; }
   @keyframes spin{ to{ transform:rotate(360deg) } }
 
+  /* Mobile refinements */
   @media (max-width: 600px){
-    .logo-wrap{ width:min(180px,60vw); margin:0 auto; }
     .brand-inner{ padding:20px; }
     .pane-inner{ padding:20px; }
     .row{
@@ -155,15 +150,12 @@
       gap: 6px;
       padding: 12px;
     }
-    .cell-label{ font-size: .9rem; }
-    .cell-value{
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
-    .stat{ min-width: auto; flex: 1 1 45%; }
-    .actions{ flex-direction: column; }
-    .btn, .btn-ghost{ width: 100%; }
-    .logo-wrap{ width:min(160px,58vw); }
+    .cell-label{ font-size:.9rem; }
+    .cell-value{ word-break:break-word; overflow-wrap:anywhere; }
+    .stat{ min-width:auto; flex:1 1 45%; }
+    .actions{ flex-direction:column; }
+    .btn, .btn-ghost{ width:100%; }
+    .logo-wrap{ width:min(160px,58vw); margin:0 auto; }
   }
   @media (max-width: 360px){
     .pane-inner{ padding:16px; }
@@ -262,7 +254,7 @@
             </div>
           </section>
         </div>
-          <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
+        <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
       </section>
     </section>
   </main>
