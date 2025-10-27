@@ -166,9 +166,6 @@
       <div class="header-tools">
         <button class="btn" id="btnBackup" title="Download JSON Backup">⬇️ Backup</button>
 
-        <!-- ✅ Added Logout button -->
-        <button class="btn-ghost" id="btnLogout" title="Sign out">🚪 Logout</button>
-
         <div class="tabs">
           <button class="tab-btn active" data-tab="license">License Requests</button>
           <button class="tab-btn" data-tab="final">Final TX Requests</button>
@@ -289,9 +286,6 @@
     </section>
   </div>
 
-  <!-- ✅ Load login API (adjust path if needed) -->
-  <script src="/js/login-api.js"></script>
-
 <script>
   /* Prevent pinch/double-tap zoom while keeping vertical scroll */
   (function(){
@@ -306,6 +300,8 @@
     }, {passive:false});
     document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
   })();
+
+  const API_BASE_URL = "https://web-production-d083d.up.railway.app";
 
   function authHeaders() {
     const token = localStorage.getItem("token");
@@ -918,25 +914,7 @@
     loadFinalRequests();
     loadUsers(0);
   });
-
-  /* ✅ Logout handler */
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', () => {
-      if (confirm('Sign out of this account?')) {
-        if (window.DWF_API?.logout) {
-          window.DWF_API.logout(); // clears token/role/username and redirects to /pages/login.html
-        } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('role');
-          localStorage.removeItem('username');
-          window.location.href = '/pages/login.html';
-        }
-      }
-    });
-  }
 </script>
 </body>
 </html>
-
 
