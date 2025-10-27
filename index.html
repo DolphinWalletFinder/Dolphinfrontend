@@ -363,8 +363,22 @@
     min-width: 0;
   }
 }
-   
-</style>
+
+/* =========================
+   Centering + Responsiveness Fix
+   (Keeps design intact, only adjusts layout behavior)
+   ========================= */
+.stage{ align-items:center; justify-items:center; }
+.shell{
+  margin-inline:auto;           /* hard center */
+  justify-self:center;          /* grid self-center */
+  transform:none !important;    /* neutralize micro-shift so it's truly centered */
+  width:min(1200px, 100%);      /* prevent overflow on ultra-narrow viewports */
+}
+@supports (-webkit-touch-callout: none){
+  :root{ --ios-micro-shift: 0px !important; } /* keep centered on iOS portrait */
+}
+  </style>
 </head>
 <body>
   <div class="radar">
