@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Disable zoom / lock width -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-  <!-- App-like meta -->
   <meta name="theme-color" content="#0a1220">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,64 +19,60 @@
       --shadow-lg:0 28px 90px rgba(0,0,0,.65);
     }
 
-    /* Base reset */
     *{ box-sizing:border-box; }
     html, body { height:100%; }
     body{
       margin:0; color:var(--text);
       font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
-      /* Background (unchanged) */
       background:
         radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
         radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
         linear-gradient(180deg,#0a1220,var(--grid) 42%);
 
-      /* Prevent body from scrolling; we control scroll inside .viewport */
-      overflow:hidden;
-
+      /* Only vertical scroll */
+      overflow-x:hidden; overflow-y:auto;
+      touch-action: pan-y;
       -webkit-tap-highlight-color:transparent;
       -webkit-text-size-adjust:100%;
-      touch-action: pan-y;
-      overscroll-behavior: contain;
 
-      /* iOS safe areas */
+      /* Safe areas */
       padding: env(safe-area-inset-top, 0)
                env(safe-area-inset-right, 0)
                env(safe-area-inset-bottom, 0)
                env(safe-area-inset-left, 0);
     }
 
-    /* Full-viewport centering & scrolling container */
-    .viewport{
-      position:fixed; inset:0; z-index:0;
-      width:100%;
-      height:calc(var(--vh) * 100);     /* REAL viewport height */
-      display:grid; place-items:center;  /* TRUE center */
-      overflow-x:hidden; overflow-y:auto;/* only vertical scroll */
-      -webkit-overflow-scrolling: touch; /* smooth iOS scrolling */
-      padding: clamp(16px, 3vw, 32px);   /* breathing room */
+    /* Decorative bg layer */
+    .radar{ position:fixed; inset:0; z-index:-1 }
+
+    /* Stage gives padding; body handles scroll */
+    .stage{
+      min-height:calc(var(--vh) * 100);
+      padding: clamp(16px, 3vw, 32px);
+      position:relative;
     }
 
-    /* Optional decorative layer */
-    .radar{ position:fixed; inset:0; z-index:-1 }
-    canvas{ position:absolute; inset:0; width:100%; height:100% }
-
-    /* Main centered panel */
+    /* The panel (shell) — responsive grid */
     .shell{
-      width:min(1200px,98vw);
+      width:min(1200px, 98vw);
       min-height:560px;
-
       display:grid; grid-template-columns:1.05fr 1.45fr;
-
-      border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+      border-radius:28px; overflow:hidden; isolation:isolate;
       box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
-
-      /* Horizontal safety centering */
-      margin-inline:auto;
       background:transparent;
+      margin-inline:auto;            /* horizontal center in flow */
     }
     @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+
+    /* Perfect-centering mode */
+    .shell.centered{
+      position:fixed;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      margin:0;                      /* ignore flow margins when fixed */
+      z-index:0;
+    }
 
     .brand-pane{
       position:relative;
@@ -135,68 +129,92 @@
 <body>
   <div class="radar" aria-hidden="true"></div>
 
-  <!-- Fixed, scrollable viewport that perfectly centers content -->
-  <div class="viewport">
-    <main class="stage" aria-label="Centered Stage">
-      <section class="shell" role="region" aria-label="Transaction Status Panel">
-        <!-- LEFT / BRAND -->
-        <aside class="brand-pane">
-          <div class="brand-inner">
-            <div>
-              <div class="logo-wrap" aria-hidden="true">
-                <div class="ring"></div>
-                <img src="../assets/logo.png" alt="Dolphin Wallet Logo" />
-              </div>
-              <h1 class="title">Dolphin Wallet</h1>
-              <p class="kicker">Transaction submitted. Status updates appear on the panel.</p>
+  <main class="stage" aria-label="Stage">
+    <section class="shell" id="panel" role="region" aria-label="Transaction Status Panel">
+      <!-- LEFT / BRAND -->
+      <aside class="brand-pane">
+        <div class="brand-inner">
+          <div>
+            <div class="logo-wrap" aria-hidden="true">
+              <div class="ring"></div>
+              <img src="../assets/logo.png" alt="Dolphin Wallet Logo" />
+            </div>
+            <h1 class="title">Dolphin Wallet</h1>
+            <p class="kicker">Transaction submitted. Status updates appear on the panel.</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT / CONTENT -->
+      <section class="content-pane">
+        <div class="border-glow"></div>
+        <div class="pane-inner">
+          <header class="hero">
+            <h2>Transaction Submitted ✅</h2>
+            <p id="statusText">⏳ Awaiting admin confirmation...</p>
+          </header>
+
+          <div class="grid">
+            <div class="card" style="flex-direction:column">
+              <div class="label">Final Transaction Hash</div>
+              <div class="mono-box" id="txHash">Loading...</div>
+            </div>
+
+            <div class="card" style="flex-direction:column">
+              <div class="label">Wallet Information</div>
+              <div class="mono-box" id="walletInfo">Loading wallet data...</div>
             </div>
           </div>
-        </aside>
-
-        <!-- RIGHT / CONTENT -->
-        <section class="content-pane">
-          <div class="border-glow"></div>
-          <div class="pane-inner">
-            <header class="hero">
-              <h2>Transaction Submitted ✅</h2>
-              <p id="statusText">⏳ Awaiting admin confirmation...</p>
-            </header>
-
-            <div class="grid">
-              <div class="card" style="flex-direction:column">
-                <div class="label">Final Transaction Hash</div>
-                <div class="mono-box" id="txHash">Loading...</div>
-              </div>
-
-              <div class="card" style="flex-direction:column">
-                <div class="label">Wallet Information</div>
-                <div class="mono-box" id="walletInfo">Loading wallet data...</div>
-              </div>
-            </div>
-            <div class="actions">
-              <button class="btn" id="withdrawBtn" disabled>Proceed to Server</button>
-            </div>
+          <div class="actions">
+            <button class="btn" id="withdrawBtn" disabled>Proceed to Server</button>
           </div>
-          <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
-        </section>
+        </div>
+        <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
       </section>
-    </main>
-  </div>
+    </section>
+  </main>
 
   <script>
-    /* Set --vh to the REAL innerHeight to avoid iOS/Android chrome jumps */
-    function setRealVh(){
+    // Real viewport height for iOS/Android
+    function setVh(){
       document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
-      // Also pin .viewport height directly for older WebViews:
-      const vp = document.querySelector('.viewport');
-      if (vp) vp.style.height = window.innerHeight + 'px';
     }
-    setRealVh();
-    window.addEventListener('resize', setRealVh, { passive:true });
-    window.addEventListener('orientationchange', setRealVh, { passive:true });
 
+    // Toggle perfect-center only when panel fits
+    function centerPanel(){
+      const panel = document.getElementById('panel');
+      if(!panel) return;
+
+      // Remove centering to measure natural size
+      panel.classList.remove('centered');
+
+      // Allow browser to paint before measuring
+      requestAnimationFrame(() => {
+        const panelHeight = panel.getBoundingClientRect().height;
+        const viewport = window.innerHeight;
+
+        // If panel fits with a small margin, fix-center it
+        if (panelHeight + 24 <= viewport) {
+          panel.classList.add('centered');
+        } else {
+          panel.classList.remove('centered'); // flow layout; page scrolls vertically
+        }
+      });
+    }
+
+    function initLayout(){
+      setVh();
+      centerPanel();
+    }
+
+    window.addEventListener('load', initLayout, { passive:true });
+    window.addEventListener('resize', () => { setVh(); centerPanel(); }, { passive:true });
+    window.addEventListener('orientationchange', () => { setVh(); centerPanel(); }, { passive:true });
+
+    /* Your existing app logic (untouched) */
     const API_BASE_URL = "https://web-production-13d5a.up.railway.app/api";
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+
     if (!token) {
       alert("Please log in first.");
       window.location.href = "login.html";
@@ -246,11 +264,14 @@
           withdrawBtn.disabled = true;
           withdrawBtn.onclick = null;
         }
+
+        // Re-evaluate centering if content height changed
+        centerPanel();
       })
       .catch(() => alert("Error loading transaction status."));
     }
 
-    // Init
+    // Init app data
     loadWalletData();
     loadFinalTx();
     const poll = setInterval(loadFinalTx, 5000);
