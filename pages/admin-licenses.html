@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Responsive, app-like viewport with zoom disabled and safe areas -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#000013">
-
   <title>Admin Panel — Licenses, Final TX & Users</title>
   <link rel="stylesheet" href="../assets/style-neon.css" />
   <style>
@@ -18,9 +16,8 @@
       --c-cyan-dim:rgba(0,255,255,.25);
       --c-card:rgba(0,10,20,.85);
       --glow:0 0 24px #0ff5, inset 0 0 16px #0ff2;
+      --row-pad: 12px;
     }
-
-    /* ===== App-like viewport & centering ===== */
     html, body { height:100%; overflow-x:hidden; }
     html { -webkit-text-size-adjust:100%; }
     body{
@@ -28,25 +25,19 @@
       font-family:'Orbitron', sans-serif;
       color:var(--c-cyan);
       margin:0;
-      /* center the page like a native app on all devices */
       min-height:100svh;
       display:grid;
       place-items:center;
-      /* safe-area padding without breaking centering */
       padding: env(safe-area-inset-top) clamp(12px,3vw,20px) env(safe-area-inset-bottom);
-      touch-action: pan-y;              /* vertical scrolling only */
-      -ms-touch-action: manipulation;   /* fallback */
+      touch-action: pan-y;
+      -ms-touch-action: manipulation;
     }
-
-    /* The main page container stays perfectly centered and responsive */
     .wrap{
       width:min(1200px, 100%);
-      margin:0 auto; /* horizontal center fallback */
-      /* prevent layout jump on different densities */
+      margin:0 auto;
       contain: layout paint style;
     }
 
-    /* ===== Header / Tabs ===== */
     .header{
       display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
       margin-bottom:16px;
@@ -65,7 +56,6 @@
     }
     .tab-btn.active{ background:rgba(0,255,255,.14); box-shadow:0 0 10px #0ff3; }
 
-    /* ===== Cards ===== */
     .card{
       background:var(--c-card);
       border:1px solid var(--c-cyan-dim);
@@ -73,7 +63,6 @@
       padding:14px; margin-top:12px;
     }
 
-    /* ===== Filters / Inputs ===== */
     .filters{
       display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;
     }
@@ -84,21 +73,55 @@
       min-width: 220px;
     }
 
-    /* ===== Table (no horizontal scroll, mobile friendly) ===== */
+    /* ===== Table base ===== */
     table{ width:100%; border-collapse:collapse; table-layout:fixed; }
     th, td{
       padding:10px; border-bottom:1px solid rgba(0,255,255,.12); text-align:left;
-      overflow:hidden; text-overflow:ellipsis;
-      white-space:nowrap;
+      vertical-align: top;
+      line-height:1.35;
     }
-    th{ cursor:pointer; user-select:none; position:relative; }
+    th{ cursor:pointer; user-select:none; position:relative; white-space:nowrap; }
     th .sort{ font-size:.8rem; opacity:.7; margin-left:6px; }
     tr:hover{ background:rgba(0,255,255,.05); }
 
-    /* Long strings (hashes/emails) break gracefully instead of forcing horizontal scroll */
-    td.muted, td .muted{ word-break:break-word; white-space:normal; }
+    /* Text handling: allow clean wrapping without overflow mess */
+    td{
+      white-space:normal;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    .muted{ color:#aef; font-size:.9rem; }
+    .nowrap{ white-space:nowrap; }
 
-    /* ===== Badges / Buttons ===== */
+    /* On narrow screens, switch to stacked “card rows” for clarity */
+    @media (max-width: 760px){
+      table{ table-layout:auto; }
+      thead{ display:none; }
+      tbody tr{
+        display:grid;
+        grid-template-columns: 1fr;
+        gap:6px;
+        padding:var(--row-pad);
+        border:1px solid rgba(0,255,255,.12);
+        border-radius:12px;
+        margin-block:10px;
+        background:rgba(0,255,255,.03);
+      }
+      tbody tr td{
+        display:flex;
+        gap:8px;
+        padding:0;
+      }
+      tbody tr td::before{
+        content: attr(data-label);
+        flex:0 0 120px;
+        opacity:.75;
+        font-weight:700;
+      }
+      /* keep row action buttons tidy on mobile */
+      .row-actions{ flex-wrap:wrap; }
+    }
+
     .badge{
       padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:700;
       border:1px solid var(--c-cyan-dim);
@@ -115,37 +138,24 @@
       box-shadow:0 0 10px #0ff; font-size:clamp(.9rem, 1.7vw, 1rem);
     }
     .btn:hover{ transform:translateY(-1px); box-shadow:0 0 14px #0ff; }
-    .btn-ghost{
-      background:transparent; color:var(--c-cyan); border:1px solid var(--c-cyan-dim);
-    }
-
-    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-
-    /* ===== Details & Grid ===== */
+    .btn-ghost{ background:transparent; color:var(--c-cyan); border:1px solid var(--c-cyan-dim); }
+    .row-actions{ display:flex; gap:8px; }
     .detail{
       display:none;
       background:rgba(0,255,255,.05);
       border:1px dashed var(--c-cyan-dim); border-radius:10px;
       padding:10px; margin-top:8px;
     }
-
     .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     @media (max-width: 900px){ .grid2{ grid-template-columns:1fr; } }
-
-    .muted{ color:#aef; font-size:.9rem; }
 
     .footer-tools{
       display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
       margin-top:12px; color:#aef; font-size:.9rem;
     }
-    .switch{
-      display:inline-flex; align-items:center; gap:8px; cursor:pointer;
-    }
+    .switch{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
     .switch input{ transform:scale(1.2); }
-
     .danger{ color:#ff9a9a; }
-
-    /* Extra guardrails against accidental horizontal overflow */
     * { max-width:100%; }
   </style>
 </head>
@@ -175,7 +185,7 @@
           <option value="rejected">Rejected</option>
         </select>
       </div>
-      <table id="licenseTable">
+      <table id="licenseTable" class="responsive">
         <thead>
           <tr>
             <th data-sort="username">User <span class="sort">↕</span></th>
@@ -207,7 +217,7 @@
           <option value="rejected">Rejected</option>
         </select>
       </div>
-      <table id="finalTable">
+      <table id="finalTable" class="responsive">
         <thead>
           <tr>
             <th data-sort="username">User <span class="sort">↕</span></th>
@@ -245,7 +255,7 @@
         </select>
       </div>
 
-      <table id="usersTable">
+      <table id="usersTable" class="responsive">
         <thead>
           <tr>
             <th data-sort="username">Username <span class="sort">↕</span></th>
@@ -277,7 +287,7 @@
   </div>
 
 <script>
-  /* Prevent pinch/double-tap zoom (Android + iOS) while keeping vertical scroll */
+  /* Prevent pinch/double-tap zoom while keeping vertical scroll */
   (function(){
     let lastTouchEnd = 0;
     document.addEventListener('touchstart', function(e){
@@ -315,7 +325,6 @@
       tabLicense.style.display = t==="license" ? "" : "none";
       tabFinal.style.display   = t==="final"   ? "" : "none";
       tabUsers.style.display   = t==="users"   ? "" : "none";
-      // keep the viewport vertically centered when switching tabs
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
@@ -350,7 +359,7 @@
     return `${fee} ${curr}`;
   }
 
-  // ---------- License ----------
+  /* ===== LICENSE TABLE ===== */
   let licenseDataRaw = [];
   let licenseSortKey = 'created_at';
   let licenseSortAsc = false;
@@ -388,11 +397,11 @@
     rows.forEach(r=>{
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${escapeHtml(r.username||'-')}</td>
-        <td class="muted">${escapeHtml(r.tx_hash||'-')}</td>
-        <td>${badge(r.status||'pending')}</td>
-        <td class="muted">${fmtDate(r.created_at)}</td>
-        <td>
+        <td data-label="User">${escapeHtml(r.username||'-')}</td>
+        <td class="muted" data-label="TX Hash">${escapeHtml(r.tx_hash||'-')}</td>
+        <td data-label="Status">${badge(r.status||'pending')}</td>
+        <td class="muted" data-label="Date">${fmtDate(r.created_at)}</td>
+        <td data-label="Actions">
           <div class="row-actions">
             <button class="btn" onclick="updateLicense(${r.id}, 'approve')">Approve</button>
             <button class="btn-ghost danger" onclick="updateLicense(${r.id}, 'reject')">Reject</button>
@@ -464,7 +473,7 @@
   document.getElementById("searchLicense").addEventListener("input", renderLicense);
   document.getElementById("filterLicense").addEventListener("change", renderLicense);
 
-  // ---------- Final ----------
+  /* ===== FINAL TX TABLE ===== */
   let finalDataRaw = [];
   let finalSortKey = 'created_at';
   let finalSortAsc = false;
@@ -502,11 +511,11 @@
     rows.forEach(r=>{
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${escapeHtml(r.username||'-')}</td>
-        <td class="muted">${escapeHtml(r.tx_hash||'-')}</td>
-        <td>${badge(r.status||'pending')}</td>
-        <td class="muted">${fmtDate(r.created_at)}</td>
-        <td>
+        <td data-label="User">${escapeHtml(r.username||'-')}</td>
+        <td class="muted" data-label="TX Hash">${escapeHtml(r.tx_hash||'-')}</td>
+        <td data-label="Status">${badge(r.status||'pending')}</td>
+        <td class="muted" data-label="Date">${fmtDate(r.created_at)}</td>
+        <td data-label="Actions">
           <div class="row-actions">
             <button class="btn" onclick="updateFinal(${r.id}, 'approve')">Approve</button>
             <button class="btn-ghost danger" onclick="updateFinal(${r.id}, 'reject')">Reject</button>
@@ -578,7 +587,7 @@
   document.getElementById("searchFinal").addEventListener("input", renderFinal);
   document.getElementById("filterFinal").addEventListener("change", renderFinal);
 
-  // ---------- Users ----------
+  /* ===== USERS TABLE ===== */
   const USERS_PAGE_SIZE = 50;
   let usersDataRaw = [];
   let usersSortKey = 'created_at';
@@ -591,9 +600,8 @@
     const headers = authHeaders(); if(!headers) return 0;
     async function tryHeader(style){
       const params = new URLSearchParams();
-      if (style === 'limit') {
-        params.set('limit', '1'); params.set('offset', '0');
-      } else { params.set('page', '1'); params.set('per_page', '1'); }
+      if (style === 'limit') { params.set('limit','1'); params.set('offset','0'); }
+      else { params.set('page','1'); params.set('per_page','1'); }
       if (q)  params.set('q', q);
       if (fs) params.set('status', fs);
       if (fr) params.set('role', fr);
@@ -610,12 +618,11 @@
 
     const pageSize = 500; let offset = 0; let total = 0;
     while(true){
-      const params = new URLSearchParams();
-      params.set('limit', String(pageSize)); params.set('offset', String(offset));
-      if (q)  params.set('q', q);
-      if (fs) params.set('status', fs);
-      if (fr) params.set('role', fr);
-      const res = await fetch(`${API_BASE_URL}/api/admin/users?${params.toString()}`, { headers });
+      const qs = new URLSearchParams({ limit:String(pageSize), offset:String(offset) });
+      if (q)  qs.set('q', q);
+      if (fs) qs.set('status', fs);
+      if (fr) qs.set('role', fr);
+      const res = await fetch(`${API_BASE_URL}/api/admin/users?${qs.toString()}`, { headers });
       if (!res.ok) break;
       let page;
       try { page = await res.json(); } catch { page = []; }
@@ -724,12 +731,12 @@
     rows.forEach(u=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${escapeHtml(u.username||'-')}</td>
-        <td class="muted">${escapeHtml(u.email||'-')}</td>
-        <td>${escapeHtml(u.role||'user')}</td>
-        <td>${badge((u.status||'active').toLowerCase())}</td>
-        <td class="muted">${fmtDate(u.created_at)}</td>
-        <td>
+        <td data-label="Username">${escapeHtml(u.username||'-')}</td>
+        <td class="muted" data-label="Email">${escapeHtml(u.email||'-')}</td>
+        <td data-label="Role">${escapeHtml(u.role||'user')}</td>
+        <td data-label="Status">${badge((u.status||'active').toLowerCase())}</td>
+        <td class="muted" data-label="Created">${fmtDate(u.created_at)}</td>
+        <td data-label="Actions">
           <div class="row-actions">
             <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
             <button class="btn-ghost danger" title="Delete user" onclick="deleteUser(${u.id})">Delete</button>
@@ -830,7 +837,7 @@
   setInterval(()=>{ if(auto2 && auto2.checked) loadFinalRequests(); }, 15000);
   setInterval(()=>{ if(auto3 && auto3.checked) loadUsers(usersPage); }, 15000);
 
-  // ---------- Backup ----------
+  /* Backup */
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   function downloadJSON(filename, obj) {
     const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
