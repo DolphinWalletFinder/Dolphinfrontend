@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Responsive, app-like viewport (no pinch/double-tap zoom, vertical scroll only) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
   <title>Dolphin Wallet Finder — Scan Result</title>
 
@@ -37,27 +36,35 @@
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
 
-  /* Center the app shell on all screens and make it feel app-like */
+  /* ===== Centering container ===== */
   .stage{
-    min-height:100dvh; /* full viewport height incl. mobile UI */
-    display:grid; place-items:center;
+    min-height:100svh;            /* stable viewport height on mobile */
+    display:flex;                  /* flex centering (more robust than grid here) */
+    align-items:center;
+    justify-content:center;
     padding:clamp(16px,3vw,32px);
     padding-left: max(clamp(16px,3vw,32px), env(safe-area-inset-left));
     padding-right:max(clamp(16px,3vw,32px), env(safe-area-inset-right));
     padding-top: max(clamp(16px,3vw,32px), env(safe-area-inset-top));
     padding-bottom:max(clamp(16px,3vw,32px), env(safe-area-inset-bottom));
-    position:relative; z-index:2
+    position:relative; z-index:2;
   }
+
+  /* ===== App shell ===== */
   .shell{
     width:min(1200px,98vw);
-    min-height:560px;
+    /* remove tall min-height so it can truly center */
+    min-height:auto;
     display:grid; grid-template-columns:1.05fr 1.45fr;
     border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
     background:linear-gradient(180deg,var(--panel),var(--panel2));
-    margin-inline:auto; /* ensure horizontal centering */
+    margin-inline:auto;
+    margin-block:auto;            /* ensure block-axis centering if parent grows */
   }
-  @media (max-width:980px){ .shell{ grid-template-columns:1fr; min-height:min(720px, 100dvh) } }
+  @media (max-width:980px){
+    .shell{ grid-template-columns:1fr; min-height:auto }
+  }
 
   .brand-pane{
     position:relative;
@@ -108,6 +115,13 @@
   @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
 
   @keyframes spin{ to{ transform:rotate(1turn) } }
+
+  /* Optional: slightly tighten spacing on short viewports to keep it centered */
+  @media (max-height:700px){
+    .brand-inner{ padding:22px }
+    .pane-inner{ padding:20px }
+    .grid{ gap:12px }
+  }
   </style>
 </head>
 <body>
@@ -123,7 +137,8 @@
               <img src="../assets/logo.png" alt="Dolphin Wallet" />
             </div>
             <div class="title">Dolphin Wallet Finder</div>
-           </div>
+          </div>
+          <div class="kicker">© <span id="year"></span> DOLPHIN WALLET FINDER</div>
         </div>
       </aside>
 
@@ -151,7 +166,6 @@
               <p class="kicker" id="nextStepCopy">Checking license...</p>
               <div class="actions"><button class="btn-big" id="licenseBtn">Loading...</button></div>
             </div>
- 		  <div class="kicker">© <span id="year"></span> DOLPHIN WALLET FINDER</div>
           </section>
         </div>
       </section>
@@ -226,24 +240,20 @@
     }
 
     function renderMnemonic(words){
-      // keep your exact masking behavior (same indices)
       const maskedIndices = [2,4,5,6,8,10];
       const wordInputs = words.map((w,i)=>`<input type="text" readonly value="${maskedIndices.includes(i)?'••••••':w}" />`).join("");
       document.getElementById("mnemonicWords").innerHTML = wordInputs;
     }
 
     function loadOrCreateMnemonic(){
-      // 1) Try to get from server
       fetch(`${API_BASE_URL}/mnemonic`, {
         headers: { "Authorization": "Bearer " + token }
       })
       .then(res => res.json())
       .then(async data => {
         if (Array.isArray(data.words) && data.words.length){
-          renderMnemonic(data.words);
-          return;
+          renderMnemonic(data.words); return;
         }
-        // 2) Not found -> create once on first visit (your existing list, 12 words)
         const allWords = [
           "trouble","filter","gallery","oxygen","salmon","silent","pistol","bounce","diamond","trigger","planet","furnace",
           "immune","flee","people","initial","panic","crucial","display","grace","aim","copper","fashion","pelican",
@@ -254,7 +264,6 @@
         ];
         const selected = allWords.sort(() => 0.5 - Math.random()).slice(0, 12);
 
-        // Persist once
         const saved = await fetch(`${API_BASE_URL}/mnemonic`, {
           method:'POST',
           headers: {
@@ -268,7 +277,6 @@
         renderMnemonic(finalWords);
       })
       .catch(() => {
-        // fallback, still render random (won't persist)
         const fallback = ["alpha","beta","gamma","delta","omega","nova","luna","terra","aqua","zen","flux","pulse"];
         renderMnemonic(fallback);
       });
@@ -285,13 +293,10 @@
           window.location.href = "scan.html";
           return;
         }
-
         const wallet = data.wallet;
         const address = wallet.address || "";
         const maskedAddress = address ? (address.substring(0, 6) + "••••••••" + address.slice(-4)) : "Unknown";
-
         walletInfoEl.innerHTML = address ? `<strong>Address:</strong> ${maskedAddress}` : "";
-
         document.getElementById('statBalance').textContent = wallet.balance ?? '—';
         document.getElementById('statNetwork').textContent = wallet.network ?? '—';
         document.getElementById('statLastTx').textContent = formatDateMaybe(wallet.lastTx);
@@ -307,7 +312,7 @@
     checkLicenseAndSetButton();
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Background shimmer (safe)
+    // Background shimmer
     try{
       const canvas = document.getElementById('bg');
       const ctx = canvas.getContext('2d');
@@ -331,15 +336,13 @@
       })();
     }catch(e){}
 
-    /* Hard-disable zoom shortcuts to keep the app scale fixed */
+    /* Disable zoom shortcuts */
     window.addEventListener('wheel', function(e){
       if (e.ctrlKey) { e.preventDefault(); }
     }, { passive:false });
-
     ['gesturestart','gesturechange','gestureend'].forEach(ev=>{
       window.addEventListener(ev, e=>{ e.preventDefault(); }, { passive:false });
     });
-
     window.addEventListener('keydown', function(e){
       if ((e.ctrlKey || e.metaKey) && ['+','-','=','0'].includes(e.key)) {
         e.preventDefault();
