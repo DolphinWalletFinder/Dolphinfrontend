@@ -2,7 +2,8 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Disable zoom & lock to vertical scroll on mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>License Activation — Dolphin Wallet Finder</title>
 
   <style>
@@ -16,6 +17,12 @@
   }
   *{box-sizing:border-box}
   html,body{height:100%}
+
+  /* App-like behavior: vertical scroll only, centered, safe-area aware */
+  html{
+    overflow-x:hidden;
+    overscroll-behavior-y: contain;
+  }
   body{
     margin:0; color:var(--text);
     font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -23,17 +30,30 @@
       radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
       radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
       linear-gradient(180deg,#0a1220,var(--grid) 42%);
-    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+    overflow-x:hidden; /* lock horizontal */
+    -webkit-tap-highlight-color:transparent;
+    touch-action: pan-y; /* allow only vertical panning */
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+             env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
   }
 
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
 
-  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
+  /* Use *viewport* units to keep shell perfectly centered on every device height */
+  .stage{
+    min-height:100svh; /* small viewport height for mobile browser UI */
+    min-height:100dvh; /* dynamic vh as fallback/newer */
+    display:grid; place-items:center;
+    padding:clamp(16px,3vw,32px);
+    position:relative; z-index:2
+  }
   .shell{
-    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
+    width:min(1200px,98vw); min-height:560px;
+    display:grid; grid-template-columns:1.05fr 1.45fr;
     border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+    margin-inline:auto; /* ensure horizontal center if any UA quirks */
   }
   @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
@@ -84,7 +104,7 @@
     padding:12px 14px;
     border-radius:12px;
     font-family:monospace;
-    font-size:16px;
+    font-size:16px; /* keep >=16px to avoid iOS zoom on focus */
   }
   .wallet-address{
     background:rgba(0,0,0,.35);
@@ -109,7 +129,7 @@
   .status-message{ color:var(--muted); padding-top:6px; min-height:26px }
   .helper{ font-size:.9rem; color:var(--muted) }
 
-  /* --- NEW: wallets two-column layout --- */
+  /* wallets two-column layout (unchanged) */
   .wallets{ display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
   @media (max-width:680px){ .wallets{ grid-template-columns:1fr } }
   .wallet-card{ display:flex; flex-direction:column; gap:8px; align-items:stretch; }
@@ -154,11 +174,11 @@
         <div class="pane-inner">
           <header class="hero">
             <h2>🔑 License Activation</h2>
-            <p>To continue, send <b>200 USDT</b> via <b>TRC20</b> or <b>BEP20</b> network to one of the addresses below.</p>
+            <p>To continue, send <b>250 USDT</b> via <b>TRC20</b> or <b>BEP20</b> network to one of the addresses below.</p>
           </header>
 
           <div class="stats">
-            <div class="stat"><div class="n">200 USDT</div><div class="l">Amount</div></div>
+            <div class="stat"><div class="n">250 USDT</div><div class="l">Amount</div></div>
             <div class="stat"><div class="n">TRC20 / BEP20</div><div class="l">Networks</div></div>
             <div class="stat"><div class="n">One-Time</div><div class="l">Payment</div></div>
           </div>
@@ -168,7 +188,7 @@
             <div class="card" style="flex-direction:column; align-items:stretch">
               <div class="helper">Wallet Addresses:</div>
 
-              <!-- NEW: two networks side-by-side -->
+              <!-- two networks side-by-side -->
               <div class="wallets">
                 <div class="wallet-card">
                   <div class="helper">TRC20</div>
@@ -215,7 +235,7 @@
   <script>
     const API_BASE_URL = "https://web-production-13d5a.up.railway.app/api";
 
-    // NEW: separate constants for each network
+    // separate constants for each network
     const LICENSE_WALLET_ADDRESS_TRC20 = "TWWKr8K7pZuXTHK6ogVwZ7kAN5mVLHMmpp";
     const LICENSE_WALLET_ADDRESS_BEP20 = "0xacDd54d29d350f183bE47Ec64C95Bfc05805c902";
 
@@ -313,4 +333,3 @@
   </script>
 </body>
 </html>
-
