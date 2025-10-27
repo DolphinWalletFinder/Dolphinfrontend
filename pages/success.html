@@ -10,8 +10,12 @@
   <title>Transaction Status — Dolphin Wallet Finder</title>
 
   <style>
+  /* --- HARD RESET (prevents any parent/frame CSS from shifting layout) --- */
+  html, body { margin:0 !important; padding:0 !important; height:100%; }
+  *, *::before, *::after { box-sizing:border-box; }
+
   :root{
-    /* Real viewport height will override this via JS */
+    /* Will be set by JS to window.innerHeight */
     --vh: 1vh;
 
     --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
@@ -22,28 +26,18 @@
     --shadow-lg:0 28px 90px rgba(0,0,0,.65);
   }
 
-  *{ box-sizing:border-box; }
-  html, body{ height:100%; }
   body{
-    margin:0; color:var(--text);
+    color:var(--text);
     font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
-    /* Background (unchanged) */
     background:
       radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
       radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
       linear-gradient(180deg,#0a1220,var(--grid) 42%);
-
-    /* Only vertical scroll */
-    overflow-x:hidden; overflow-y:auto;
-
-    /* Mobile niceties */
+    overflow:hidden; /* scrolling handled by .viewport */
     -webkit-tap-highlight-color:transparent;
     -webkit-text-size-adjust:100%;
     touch-action: pan-y;
-    overscroll-behavior-x: none;
 
-    /* Safe areas */
     padding: env(safe-area-inset-top, 0)
              env(safe-area-inset-right, 0)
              env(safe-area-inset-bottom, 0)
@@ -54,31 +48,30 @@
   .radar{ position:fixed; inset:0; z-index:-2 }
   canvas{ position:absolute; inset:0; width:100%; height:100% }
 
-  /* CENTERING WRAPPER
-     - Uses the REAL viewport height
-     - Centers perfectly when content fits
-     - If content is taller, page scrolls vertically (no clipping) */
-  .stage{
-    min-height: calc(var(--vh) * 100);
-    display: grid;
-    place-items: center;
-    padding: clamp(16px, 3vw, 32px);
-    position: relative; z-index: 2;
+  /* === FIXED, SCROLLABLE VIEWPORT THAT TRUE-CENTERS CONTENT === */
+  .viewport{
+    position:fixed; inset:0; z-index:0;
+    width:100%;
+    height:calc(var(--vh) * 100);     /* real innerHeight */
+    display:grid; place-items:center;  /* mathematical center */
+    overflow-x:hidden; overflow-y:auto;/* vertical scroll only */
+    -webkit-overflow-scrolling: touch;
+    padding:clamp(16px,3vw,32px);
+  }
+  /* Prefer modern large viewport unit when available */
+  @supports (height: 100lvh){
+    .viewport{ height:100lvh; }
   }
 
   /* Main panel */
   .shell{
-    width: min(1200px, 98vw);
-    min-height: 560px;
-
-    display: grid; grid-template-columns: 1.05fr 1.45fr;
-
-    border-radius: 28px; overflow: hidden; isolation: isolate; position: relative;
-    box-shadow: var(--shadow-lg); border: 1px solid var(--stroke);
-
-    /* Extra horizontal centering safety */
-    margin-inline: auto;
-    background: transparent;
+    width:min(1200px,98vw);
+    min-height:560px;
+    display:grid; grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
+    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+    margin:0 auto; /* extra horizontal safety */
+    background:transparent;
   }
   @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
@@ -118,7 +111,6 @@
   .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
   @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
 
-  /* Bits */
   .label{ color:var(--muted); font-size:.95rem }
   .mono-box{
     width:100%; padding:14px 16px; border-radius:14px;
@@ -138,8 +130,9 @@
 <body>
   <div class="radar" aria-hidden="true"></div>
 
-  <main class="stage" role="region" aria-label="Transaction Status Panel">
-    <section class="shell">
+  <!-- Fixed grid viewport that centers the panel; scrolls vertically only -->
+  <div class="viewport">
+    <section class="shell" role="region" aria-label="Transaction Status Panel">
 
       <!-- LEFT / BRAND -->
       <aside class="brand-pane">
@@ -159,7 +152,6 @@
       <section class="content-pane">
         <div class="border-glow"></div>
         <div class="pane-inner">
-
           <header class="hero">
             <h2>Transaction Submitted ✅</h2>
             <p id="statusText">⏳ Awaiting admin confirmation...</p>
@@ -183,10 +175,10 @@
         <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
       </section>
     </section>
-  </main>
+  </div>
 
 <script>
-  /* Real viewport height fix for iOS/Android */
+  /* Use REAL innerHeight to avoid iOS/Android chrome jumps */
   function setVh(){
     const vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--vh', `${vh}px`);
