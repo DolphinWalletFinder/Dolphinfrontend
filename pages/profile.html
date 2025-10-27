@@ -42,20 +42,24 @@
     overscroll-behavior-x:none;
 
     -webkit-tap-highlight-color:transparent;
-
-    /* Prevent pinch/double-tap zoom; allow only vertical pan */
-    touch-action: pan-y;
+    touch-action: pan-y; /* allow only vertical pan */
   }
 
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
 
-  /* Exact center on all devices, safe-area aware */
+  /* 🚀 Exact center on all devices, safe-area aware, and still scrolls when tall */
   .stage{
-    min-height:100dvh; /* dynamic viewport (iOS/Android) */
-    min-height:100svh; /* keyboard-safe fallback */
-    display:grid;
-    place-items:center; /* centers both axes */
+    /* robust viewport centering */
+    min-height:100vh;  /* legacy fallback */
+    min-height:100svh; /* small viewport (keyboard-safe) */
+    min-height:100dvh; /* dynamic viewport */
+    min-height:100lvh; /* large viewport (ignores bars → stable center) */
+
+    display:flex;
+    align-items:center;    /* vertical center */
+    justify-content:center;/* horizontal center */
+
     padding:
       calc(env(safe-area-inset-top,0px) + clamp(16px,3vw,32px))
       clamp(16px,3vw,32px)
@@ -66,15 +70,13 @@
   /* Shell stays centered like an app card */
   .shell{
     width:min(1200px,98vw);
-    min-height:560px;
+    /* let height be natural; if it exceeds viewport, page will scroll */
     display:grid; grid-template-columns:1.05fr 1.45fr;
     border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
-
-    margin-inline:auto;   /* horizontal center fallback */
-    place-self:center;    /* grid center insurance */
+    margin:0; /* flex will center it */
   }
-  @media (max-width:980px){ .shell{ grid-template-columns:1fr; min-height:unset } }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
   .brand-pane{
     position:relative;
@@ -178,10 +180,10 @@
             <img src="../assets/logo.png" alt="Dolphin Wallet Finder Logo" />
           </div>
 
-          <div>
-            <div class="title">Dolphin Wallet Finder</div>
-            <p class="kicker">Manage your wallet, license, and actions in one place.</p>
-          </div>
+        <div>
+          <div class="title">Dolphin Wallet Finder</div>
+          <p class="kicker">Manage your wallet, license, and actions in one place.</p>
+        </div>
         </div>
       </aside>
 
