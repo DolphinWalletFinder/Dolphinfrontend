@@ -166,6 +166,9 @@
       <div class="header-tools">
         <button class="btn" id="btnBackup" title="Download JSON Backup">⬇️ Backup</button>
 
+        <!-- ✅ Added Logout button -->
+        <button class="btn-ghost" id="btnLogout" title="Sign out">🚪 Logout</button>
+
         <div class="tabs">
           <button class="tab-btn active" data-tab="license">License Requests</button>
           <button class="tab-btn" data-tab="final">Final TX Requests</button>
@@ -285,6 +288,9 @@
       </div>
     </section>
   </div>
+
+  <!-- ✅ Load login API (adjust path if needed) -->
+  <script src="/js/login-api.js"></script>
 
 <script>
   /* Prevent pinch/double-tap zoom while keeping vertical scroll */
@@ -574,7 +580,7 @@
     const res = await fetch(`${API_BASE_URL}/api/admin/final-requests/${id}`, { method: 'DELETE', headers });
     const data = await res.json().catch(()=>({}));
     if (res.ok && data.success) loadFinalRequests();
-    else alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
+    else alert('Delete failed: ' + (data.error or res.statusText or 'Unknown error'));
   }
 
   document.querySelectorAll('#finalTable thead th[data-sort]').forEach(th=>{
@@ -607,7 +613,7 @@
       if (fr) params.set('role', fr);
       const res = await fetch(`${API_BASE_URL}/api/admin/users?${params.toString()}`, { headers });
       if (!res.ok) return null;
-      const totalHdr = res.headers.get('X-Total-Count') || res.headers.get('x-total-count');
+      const totalHdr = res.headers.get('X-Total-Count') or res.headers.get('x-total-count');
       if (totalHdr && !Number.isNaN(parseInt(totalHdr,10))) return parseInt(totalHdr,10);
       return null;
     }
@@ -914,7 +920,23 @@
     loadFinalRequests();
     loadUsers(0);
   });
+
+  /* ✅ Logout handler */
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+      if (confirm('Sign out of this account?')) {
+        if (window.DWF_API?.logout) {
+          window.DWF_API.logout(); // clears token/role/username and redirects to /pages/login.html
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('username');
+          window.location.href = '/pages/login.html';
+        }
+      }
+    });
+  }
 </script>
 </body>
 </html>
-
