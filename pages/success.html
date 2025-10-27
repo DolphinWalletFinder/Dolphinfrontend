@@ -10,13 +10,13 @@
   <title>Transaction Status — Dolphin Wallet Finder</title>
 
   <style>
-  /* --- HARD RESET (prevents any parent/frame CSS from shifting layout) --- */
+  /* Hard reset so nothing upstream shifts layout */
   html, body { margin:0 !important; padding:0 !important; height:100%; }
   *, *::before, *::after { box-sizing:border-box; }
 
   :root{
-    /* Will be set by JS to window.innerHeight */
-    --vh: 1vh;
+    --vh: 1vh;            /* updated by JS */
+    --vpad: 16px;         /* computed equal top/bottom padding for true center */
 
     --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
     --grid:#0e1628;
@@ -33,7 +33,8 @@
       radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
       radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
       linear-gradient(180deg,#0a1220,var(--grid) 42%);
-    overflow:hidden; /* scrolling handled by .viewport */
+    overflow-x:hidden;     /* vertical only */
+    overflow-y:auto;
     -webkit-tap-highlight-color:transparent;
     -webkit-text-size-adjust:100%;
     touch-action: pan-y;
@@ -48,29 +49,26 @@
   .radar{ position:fixed; inset:0; z-index:-2 }
   canvas{ position:absolute; inset:0; width:100%; height:100% }
 
-  /* === FIXED, SCROLLABLE VIEWPORT THAT TRUE-CENTERS CONTENT === */
-  .viewport{
-    position:fixed; inset:0; z-index:0;
-    width:100%;
-    height:calc(var(--vh) * 100);     /* real innerHeight */
-    display:grid; place-items:center;  /* mathematical center */
-    overflow-x:hidden; overflow-y:auto;/* vertical scroll only */
-    -webkit-overflow-scrolling: touch;
-    padding:clamp(16px,3vw,32px);
+  /* Stage uses equal top/bottom padding computed by JS to center the panel */
+  .stage{
+    min-height: calc(var(--vh) * 100);
+    padding-block: var(--vpad) var(--vpad);
+    padding-inline: clamp(16px, 3vw, 32px);
   }
-  /* Prefer modern large viewport unit when available */
-  @supports (height: 100lvh){
-    .viewport{ height:100lvh; }
+  @supports (min-height: 100svh){
+    .stage{ min-height: 100svh; } /* modern iOS/Android */
   }
 
-  /* Main panel */
+  /* Main panel (kept intact) */
   .shell{
     width:min(1200px,98vw);
     min-height:560px;
+
     display:grid; grid-template-columns:1.05fr 1.45fr;
+
     border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
-    margin:0 auto; /* extra horizontal safety */
+    margin-inline:auto; /* true horizontal center */
     background:transparent;
   }
   @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
@@ -109,7 +107,7 @@
   .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
 
   .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
-  @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
+  @media (max-width:600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
 
   .label{ color:var(--muted); font-size:.95rem }
   .mono-box{
@@ -130,9 +128,8 @@
 <body>
   <div class="radar" aria-hidden="true"></div>
 
-  <!-- Fixed grid viewport that centers the panel; scrolls vertically only -->
-  <div class="viewport">
-    <section class="shell" role="region" aria-label="Transaction Status Panel">
+  <main class="stage" role="region" aria-label="Transaction Status Panel">
+    <section class="shell" id="panel">
 
       <!-- LEFT / BRAND -->
       <aside class="brand-pane">
@@ -175,18 +172,42 @@
         <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
       </section>
     </section>
-  </div>
+  </main>
 
 <script>
-  /* Use REAL innerHeight to avoid iOS/Android chrome jumps */
+  /* Set real viewport unit and equal top/bottom padding to force true center */
   function setVh(){
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
+    document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
   }
-  setVh();
-  window.addEventListener('resize', setVh, { passive:true });
-  window.addEventListener('orientationchange', setVh, { passive:true });
 
+  function centerByPadding(){
+    const panel = document.getElementById('panel');
+    if(!panel) return;
+
+    // Measure after layout
+    requestAnimationFrame(() => {
+      const vh = window.innerHeight;
+      const rect = panel.getBoundingClientRect();
+      const panelH = rect.height;
+
+      // If panel fits: center = (vh - panelH)/2, min 16px
+      // If not: keep minimal padding so nothing is cropped
+      const pad = Math.max( (vh - panelH) / 2, 16 );
+      document.documentElement.style.setProperty('--vpad', pad + 'px');
+    });
+  }
+
+  function initLayout(){
+    setVh();
+    centerByPadding();
+  }
+
+  // Recompute on events that change geometry
+  window.addEventListener('load', initLayout, { passive:true });
+  window.addEventListener('resize', () => { setVh(); centerByPadding(); }, { passive:true });
+  window.addEventListener('orientationchange', () => { setVh(); centerByPadding(); }, { passive:true });
+
+  /* Your existing app logic — unchanged */
   const API_BASE_URL = "https://web-production-13d5a.up.railway.app/api";
   const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
@@ -211,6 +232,7 @@
       document.getElementById("walletInfo").innerHTML = `
         <strong>Address:</strong> ${masked}\n<br><strong>Balance:</strong> ${wallet.balance}\n<br><strong>Network:</strong> ${wallet.network}\n<br><strong>Last Tx:</strong> ${wallet.lastTx || 'N/A'}
       `;
+      centerByPadding(); // content height may change
     })
     .catch(() => alert("Error loading wallet data."));
   }
@@ -239,11 +261,12 @@
         withdrawBtn.disabled = true;
         withdrawBtn.onclick = null;
       }
+      centerByPadding(); // status text change can shift height
     })
     .catch(() => alert("Error loading transaction status."));
   }
 
-  // Init
+  // Init app data
   loadWalletData();
   loadFinalTx();
   const poll = setInterval(loadFinalTx, 5000);
