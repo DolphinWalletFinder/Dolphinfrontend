@@ -14,20 +14,21 @@
     --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
     --muted:rgba(190,245,255,.85); --text:#eafaff;
     --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+    /* Fallback for Android Chrome 100vh bug */
+    --vh: 1vh;
   }
   *{box-sizing:border-box}
-  html{height:100%; overflow-x:hidden; overscroll-behavior-y:contain}
+  html{overflow-x:hidden; overscroll-behavior-y:contain}
   body{
-    min-height:100svh; min-height:100dvh;
     margin:0; color:var(--text);
     font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background:
       radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
       radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
       linear-gradient(180deg,#0a1220,var(--grid) 42%);
-    overflow-x:hidden; /* lock horizontal */
+    overflow-x:hidden;            /* lock horizontal */
     -webkit-tap-highlight-color:transparent;
-    touch-action:pan-y; /* vertical panning only */
+    touch-action: pan-y;          /* vertical panning only */
     padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
              env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
   }
@@ -35,29 +36,33 @@
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
 
-  /* === ABSOLUTE, BULLETPROOF CENTER === */
+  /* === CENTERING THAT WORKS ON ANDROID & iOS ===
+     Uses modern viewport units with JS fallback (--vh) */
   .stage{
-    position:relative;
-    min-height:100svh; min-height:100dvh;
+    /* Try modern units first */
+    min-height: 100lvh; /* large viewport height (Android-friendly) */
+    min-height: 100svh; /* small vh for iOS toolbars */
+    min-height: 100dvh; /* dynamic vh */
+    /* Fallback for old Android: */
+    min-height: calc(var(--vh) * 100);
+
     width:100%;
-    padding:clamp(16px,3vw,32px);
+    display:flex;             /* FLEX center */
+    align-items:center;
+    justify-content:center;
+    padding: clamp(16px, 3vh, 32px);
   }
+
   .shell{
-    position:absolute; left:50%; top:50%;
-    transform:translate(-50%,-50%);
-    width:min(1200px,98vw); min-height:560px;
+    width:min(1200px,98vw);
+    min-height:560px;
     display:grid; grid-template-columns:1.05fr 1.45fr;
-    border-radius:28px; overflow:hidden; isolation:isolate;
+    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+    margin:0 auto;            /* horizontal centering */
     max-width:100%;
-    background:transparent; /* keep your look */
+    background:transparent;
   }
-
-  /* If viewport is short, let it scroll from the top (prevents clipping) */
-  @media (max-height: 720px){
-    .shell{ position:static; transform:none; margin:24px auto; }
-  }
-
   @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
   .brand-pane{
@@ -143,7 +148,7 @@
     .logo-wrap{ width:min(180px,60vw); margin:0 auto; }
   }
 
-  /* Final safety overrides in case of framework wrappers */
+  /* Safety overrides (if wrapped by a framework) */
   html, body, #app, #root { margin:0 !important; padding:0 !important; }
   </style>
 </head>
@@ -313,8 +318,8 @@
     if (c && c.getContext) {
       const ctx = c.getContext('2d');
       const dpr = window.devicePixelRatio || 1;
-      function resize(){ c.width = innerWidth*dpr; c.height = innerHeight*dpr; }
-      resize(); addEventListener('resize', resize);
+      function resizeBg(){ c.width = innerWidth*dpr; c.height = innerHeight*dpr; }
+      resizeBg(); addEventListener('resize', resizeBg);
       let t=0;
       (function loop(){
         ctx.clearRect(0,0,c.width,c.height);
@@ -323,7 +328,7 @@
           const r = (Math.min(c.width,c.height)/3) * (i/24);
           ctx.beginPath();
           ctx.arc(c.width/2, c.height/2, r + Math.sin(t/25+i)*8*dpr, 0, Math.PI*2);
-          ctx.strokeStyle = `rgba(64,203,255,0.35)`;
+          ctx.strokeStyle = 'rgba(64,203,255,0.35)';
           ctx.lineWidth = 1*dpr;
           ctx.setLineDash([8*dpr, 10*dpr]);
           ctx.stroke();
@@ -332,6 +337,18 @@
         t++; requestAnimationFrame(loop);
       })();
     }
+
+    // ===== ANDROID VIEWPORT FIX =====
+    // Set --vh to actual innerHeight so 100 * var(--vh) is always correct
+    function setVH(){
+      document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    }
+    setVH();
+    // Update on resize/orientation/scroll of chrome UI
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    // Some Androids need a delayed pass after load
+    setTimeout(setVH, 300);
   </script>
 </body>
 </html>
