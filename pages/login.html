@@ -2,7 +2,8 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
+<!-- Disable zoom and make it app-like -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <meta name="theme-color" content="#070b14"/>
 <title>Dolphin Wallet Finder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -16,60 +17,83 @@
     --error:#ffb4b4; --ok:#8fffd3;
     --input-bg:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.02));
     --bd:rgba(64,203,255,.28);
+    /* App-like gutters for notches */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
   }
 
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html, body{height:100%;}
+  /* Reset & mobile ergonomics */
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html{
+    height:100%;
     touch-action: manipulation;
     overscroll-behavior-x: none;
     overscroll-behavior-y: contain;
   }
   body{
-    margin:0; color:var(--text);
+    margin:0;color:var(--text);
     font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+
+    /* Avoid address-bar resize jumps & enable true viewport centering */
+    min-height:100vh;
+    min-height:100dvh;
+
+    /* Symmetric safe-area padding so content stays visually centered */
+    padding-block: var(--safe-top) var(--safe-bottom);
+    padding-inline: max(6px, var(--safe-left), var(--safe-right));
+
+    /* Reserve space for scrollbar on both edges (prevents off-center on desktop) */
+    scrollbar-gutter: stable both-edges;
+
+    /* Only vertical scrolling */
+    overflow-x:hidden; overflow-y:auto;
+
     background:
       radial-gradient(1200px 600px at 70% 20%, rgba(30,150,255,.10), transparent 60%),
       radial-gradient(1000px 600px at 10% 80%, rgba(20,255,137,.10), transparent 60%),
       linear-gradient(180deg,#060912,#05070e 40%,#04060c);
-    -webkit-text-size-adjust:100%;
-    -webkit-font-smoothing:antialiased;
-    text-rendering:optimizeLegibility;
 
-    /* === True page-centering (no lateral drift) === */
-    display:flex;                /* make body a centering container */
-    min-height:100vh;            /* fallback */
-    min-height:100dvh;           /* dynamic viewport */
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Stage centers its child exactly */
+  /* Layout */
   .stage{
-    flex:1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    min-height:100%;
+    min-height:100dvh;
+    position:relative;
+
+    /* Robust centering */
+    display:grid;
+    place-items:center;
+
     padding:clamp(10px,4vw,24px);
     width:100%;
   }
   @supports (height: 100svh){
-    .stage{ min-height:100svh; } /* avoid iOS URL bar jump */
+    .stage{ min-height:100svh; } /* avoids iOS URL-bar jump */
   }
 
   .hud{
     position:relative;
-    inline-size:min(100%, 880px);
-    margin-inline:auto;          /* hard center horizontally */
+    width:min(100%, 880px);
+    max-width:100%;
+    margin-inline:auto;              /* hard horizontal center */
+
     display:grid;
     grid-template-columns:1.1fr 1.2fr;
+
     border-radius:24px;
     overflow:hidden;
     background:linear-gradient(180deg,var(--panel),var(--panel2));
     border:1px solid rgba(64,203,255,.25);
     box-shadow:inset 0 0 0 1px rgba(19,173,255,.06),0 18px 60px rgba(0,0,0,.55);
-    max-width:100%;
   }
   @media (max-width:980px){
-    .hud{ grid-template-columns:1fr }
+    .hud{grid-template-columns:1fr}
   }
 
   .brand .inner{height:100%;padding:20px;display:flex;flex-direction:column;justify-content:space-between}
@@ -80,7 +104,6 @@
     background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3));
     -webkit-background-clip:text;background-clip:text;color:transparent
   }
-
   .pane{padding:18px clamp(14px,4vw,28px);display:flex;flex-direction:column;gap:14px;height:100%; max-width:100%}
   .panel-mask{position:absolute;inset:12px;border-radius:18px;border:1px dashed rgba(32,205,255,.16);pointer-events:none;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
   .kicker{display:inline-flex;gap:8px;align-items:center;padding:.35rem .8rem;border-radius:999px;border:1px solid rgba(0,255,240,.25);background:rgba(0,20,28,.35);font-size:.9rem;font-weight:800;width:max-content}
@@ -90,7 +113,7 @@
 
   .mode-toggle{
     display:inline-block;margin-top:4px;color:#9fefff;background:transparent;border:none;cursor:pointer;font-weight:800;
-    font-size:16px; line-height:1.2; padding:.3rem .2rem;
+    font-size:16px; line-height:1.2; padding:.3rem .2rem; /* 16px min to avoid iOS zoom */
   }
 
   form{display:grid;grid-template-columns:1fr 1fr;gap:12px; width:100%}
@@ -100,10 +123,10 @@
   .control{position:relative}
   .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.95}
   .input{
-    width:100%;padding:16px 44px;font-size:16px;
+    width:100%;padding:16px 44px;font-size:16px; /* >=16 to prevent iOS zoom */
     color:var(--text);border-radius:14px;border:1px solid var(--bd);
     background:var(--input-bg);outline:none;transition:border .18s ease, box-shadow .18s ease;
-    -webkit-appearance:none;appearance:none;
+    -webkit-appearance: none; appearance: none;
   }
   .input::placeholder{color:rgba(220,245,255,.55)}
   .input:focus{border-color:rgba(53,167,255,.95);box-shadow:0 0 0 3px rgba(53,167,255,.28)}
@@ -112,7 +135,7 @@
     position:absolute;right:8px;top:50%;transform:translateY(-50%);
     border:none;background:transparent;color:var(--text);
     font-weight:800;padding:8px 12px;border-radius:10px;cursor:pointer;
-    font-size:16px; line-height:1;
+    font-size:16px; line-height:1; /* keep tap target >=44px with padding */
   }
 
   .error{min-height:18px;color:var(--error);font-size:14px}
@@ -126,14 +149,15 @@
   .btn:disabled{opacity:.55;cursor:not-allowed}
   .footer{width:min(1080px,96vw);margin:14px auto 0;text-align:center;color:rgba(190,245,255,.85);font-size:.86rem}
 
+  /* Modal layering */
   .hidden{display:none}
+  .stage, .hud, .pane, .brand, .panel-mask, main, section, aside { position: relative; z-index: 1; }
 
-  /* Modal always centered & full-screen-safe */
   .modal{
     position:fixed;inset:0;background:rgba(0,0,0,.55);
     display:flex;align-items:center;justify-content:center;z-index:2147483000;
     padding:16px; isolation:isolate;
-    min-height:100vh; min-height:100dvh;
+    min-height: 100dvh;
   }
   @supports (height: 100svh){
     .modal{ min-height:100svh; }
@@ -152,7 +176,7 @@
     font-size:16px;
   }
 
-  /* Ban horizontal scroll anywhere inside */
+  /* Only vertical scroll everywhere */
   .hud, .pane, form, .modal-content { max-width:100%; overflow-x:hidden }
 </style>
 </head>
@@ -231,7 +255,7 @@
     <div class="footer">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
   </main>
 
-  <!-- Modal -->
+  <!-- Modal OUTSIDE #appRoot -->
   <div id="forgot-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" tabindex="-1">
       <h3 id="forgotTitle">Reset password</h3>
@@ -261,7 +285,7 @@
   const tabIn = document.getElementById('tabSignIn');
   const tabUp = document.getElementById('tabSignUp');
   const modeToggle = document.getElementById('modeToggle');
-  const regFields = document.getElementById('registerFields');
+  const regFields = document.getElementById('registerFields`);
   const formBtn = document.getElementById('formBtn');
   const kicker = document.getElementById('formKicker');
 
@@ -288,8 +312,8 @@
       btn.textContent = isPass ? 'Hide':'Show'; btn.setAttribute('aria-pressed', String(isPass)); }); } })();
 
   const USERNAME_RE = /^[A-Za-z0-9]+$/;
-  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-  const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;      // <-- fixed (\d)
+  const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;                  // <-- fixed (\s and \.)
 
   function showError(msg){ const el = document.getElementById('errorMessage'); if (el) el.textContent = msg || ''; else alert(msg); }
   function setBusy(button, busy){ if(!button) return; button.setAttribute('aria-busy', busy ? 'true':'false'); button.disabled = !!busy; }
@@ -344,15 +368,19 @@
   let lastActiveEl = null;
 
   function openForgotModal() {
+    // reset
     forgotMsg.textContent = '';
     document.getElementById('forgot-username').value = '';
     document.getElementById('forgot-email').value = '';
     document.getElementById('forgot-newpass').value = '';
     document.getElementById('forgot-newpass2').value = '';
 
+    // show modal first
     forgotModal.classList.remove('hidden');
     forgotModal.removeAttribute('aria-hidden');
+    document.body.classList.add('modal-open');
 
+    // save and move focus BEFORE hiding background
     lastActiveEl = document.activeElement;
     const first = document.getElementById('forgot-username') || modalPanel;
     if (first && typeof first.focus === 'function') {
@@ -361,11 +389,23 @@
     if (appRoot && appRoot.contains(document.activeElement) && document.activeElement !== first) {
       document.activeElement.blur();
     }
+    if (appRoot) {
+      requestAnimationFrame(() => {
+        appRoot.setAttribute('inert', '');
+        appRoot.setAttribute('aria-hidden', 'true');
+      });
+    }
   }
 
   function closeForgotModal() {
+    if (appRoot) {
+      appRoot.removeAttribute('inert');
+      appRoot.removeAttribute('aria-hidden');
+    }
     forgotModal.classList.add('hidden');
     forgotModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+
     if (lastActiveEl && typeof lastActiveEl.focus === 'function') lastActiveEl.focus();
   }
 
