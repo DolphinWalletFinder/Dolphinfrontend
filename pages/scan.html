@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>DOLPHIN WALLET FINDER — Pro Ops</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -171,6 +171,37 @@
   .metric-value { font-size: clamp(.95rem, 6vw, 1.6rem); }
 }
 </style>
+
+  <style id="app-shell-overrides">
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    html { -ms-touch-action: pan-y; touch-action: pan-y; overscroll-behavior-y: contain; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    .app-shell {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    img, canvas, svg, video { max-width: 100%; height: auto; }
+    :root, body { overflow-x: hidden; }
+    #appMain, header, footer { touch-action: pan-y; }
+    .scroll-area { -webkit-overflow-scrolling: touch; }
+  </style>
+
 </head>
 <body>
   <div class="stars absolute inset-0"></div>
@@ -1465,5 +1496,24 @@ setTimeout(() => {
 })();
 </script>
 <!-- === End: Server Sync for Scan State === -->
+
+  <script id="no-zoom-helpers">
+    // Block pinch-zoom
+    window.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+    // Block ctrl/⌘ + wheel zoom
+    window.addEventListener('wheel', function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+    // Block double-tap zoom
+    (function () {
+      let lastTouch = 0;
+      document.addEventListener('touchend', function (e) {
+        const now = Date.now();
+        if (now - lastTouch <= 300) { e.preventDefault(); }
+        lastTouch = now;
+      }, { passive: false });
+    })();
+    // Trigger resize once after DOM ready for any canvas/layout recalcs
+    document.addEventListener('DOMContentLoaded', () => { window.dispatchEvent(new Event('resize')); });
+  </script>
+
 </body>
 </html>
