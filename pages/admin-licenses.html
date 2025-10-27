@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Responsive, app-like viewport with zoom disabled and safe areas -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000013">
+
   <title>Admin Panel — Licenses, Final TX & Users</title>
   <link rel="stylesheet" href="../assets/style-neon.css" />
   <style>
@@ -13,19 +19,39 @@
       --c-card:rgba(0,10,20,.85);
       --glow:0 0 24px #0ff5, inset 0 0 16px #0ff2;
     }
+
+    /* ===== App-like viewport & centering ===== */
+    html, body { height:100%; overflow-x:hidden; }
+    html { -webkit-text-size-adjust:100%; }
     body{
       background: radial-gradient(ellipse at center, var(--c-bg), #000);
       font-family:'Orbitron', sans-serif;
       color:var(--c-cyan);
-      margin:0; padding:20px;
+      margin:0;
+      /* center the page like a native app on all devices */
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      /* safe-area padding without breaking centering */
+      padding: env(safe-area-inset-top) clamp(12px,3vw,20px) env(safe-area-inset-bottom);
+      touch-action: pan-y;              /* vertical scrolling only */
+      -ms-touch-action: manipulation;   /* fallback */
     }
-    .wrap{ max-width:1200px; margin:0 auto; }
 
+    /* The main page container stays perfectly centered and responsive */
+    .wrap{
+      width:min(1200px, 100%);
+      margin:0 auto; /* horizontal center fallback */
+      /* prevent layout jump on different densities */
+      contain: layout paint style;
+    }
+
+    /* ===== Header / Tabs ===== */
     .header{
       display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
       margin-bottom:16px;
     }
-    .header h1{ margin:0; font-size:1.2rem; }
+    .header h1{ margin:0; font-size:clamp(1rem, 1.6vw, 1.2rem); }
 
     .tabs{
       display:flex; gap:8px; flex-wrap:wrap;
@@ -33,11 +59,13 @@
       padding:6px; border-radius:10px;
     }
     .tab-btn{
-      border:none; border-radius:8px; padding:8px 12px; cursor:pointer;
+      border:none; border-radius:8px; padding:10px 14px; cursor:pointer;
       background:transparent; color:var(--c-cyan); font-weight:700;
+      font-size:clamp(.9rem, 1.6vw, 1rem);
     }
     .tab-btn.active{ background:rgba(0,255,255,.14); box-shadow:0 0 10px #0ff3; }
 
+    /* ===== Cards ===== */
     .card{
       background:var(--c-card);
       border:1px solid var(--c-cyan-dim);
@@ -45,21 +73,32 @@
       padding:14px; margin-top:12px;
     }
 
+    /* ===== Filters / Inputs ===== */
     .filters{
       display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;
     }
     .inp, .select{
       background:#000; color:var(--c-cyan);
       border:1px solid var(--c-cyan-dim); border-radius:10px;
-      padding:10px 12px; font-family:monospace; font-size:.95rem;
+      padding:12px 14px; font-family:monospace; font-size:clamp(.9rem, 1.8vw, .95rem);
+      min-width: 220px;
     }
 
-    table{ width:100%; border-collapse:collapse; }
-    th, td{ padding:10px; border-bottom:1px solid rgba(0,255,255,.12); text-align:left; }
+    /* ===== Table (no horizontal scroll, mobile friendly) ===== */
+    table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    th, td{
+      padding:10px; border-bottom:1px solid rgba(0,255,255,.12); text-align:left;
+      overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap;
+    }
     th{ cursor:pointer; user-select:none; position:relative; }
     th .sort{ font-size:.8rem; opacity:.7; margin-left:6px; }
     tr:hover{ background:rgba(0,255,255,.05); }
 
+    /* Long strings (hashes/emails) break gracefully instead of forcing horizontal scroll */
+    td.muted, td .muted{ word-break:break-word; white-space:normal; }
+
+    /* ===== Badges / Buttons ===== */
     .badge{
       padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:700;
       border:1px solid var(--c-cyan-dim);
@@ -68,12 +107,12 @@
     .badge.approved{ background:rgba(0,255,170,.12); border-color:rgba(0,255,170,.35); color:#90ffdf; }
     .badge.rejected{ background:rgba(255,0,0,.12); border-color:rgba(255,0,0,.35); color:#ff9a9a; }
     .badge.active{ background:rgba(0,255,255,.12); border-color:rgba(0,255,255,.35); color:#aef; }
-    .badge.disabled{ background:rgba(255,0,0,.12); border-color:rgba(0,255,0,0.35); color:#ff9a9a; }
+    .badge.disabled{ background:rgba(255,0,0,.12); border-color:rgba(255,0,0,0.35); color:#ff9a9a; }
 
     .btn{
-      border:none; border-radius:8px; padding:8px 12px; cursor:pointer;
+      border:none; border-radius:8px; padding:10px 14px; cursor:pointer;
       font-weight:700; color:#000; background:linear-gradient(135deg,#0ff,#08f);
-      box-shadow:0 0 10px #0ff;
+      box-shadow:0 0 10px #0ff; font-size:clamp(.9rem, 1.7vw, 1rem);
     }
     .btn:hover{ transform:translateY(-1px); box-shadow:0 0 14px #0ff; }
     .btn-ghost{
@@ -82,6 +121,7 @@
 
     .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 
+    /* ===== Details & Grid ===== */
     .detail{
       display:none;
       background:rgba(0,255,255,.05);
@@ -104,6 +144,9 @@
     .switch input{ transform:scale(1.2); }
 
     .danger{ color:#ff9a9a; }
+
+    /* Extra guardrails against accidental horizontal overflow */
+    * { max-width:100%; }
   </style>
 </head>
 <body>
@@ -234,6 +277,20 @@
   </div>
 
 <script>
+  /* Prevent pinch/double-tap zoom (Android + iOS) while keeping vertical scroll */
+  (function(){
+    let lastTouchEnd = 0;
+    document.addEventListener('touchstart', function(e){
+      if(e.touches.length > 1){ e.preventDefault(); }
+    }, {passive:false});
+    document.addEventListener('touchend', function(e){
+      const now = Date.now();
+      if(now - lastTouchEnd <= 300){ e.preventDefault(); }
+      lastTouchEnd = now;
+    }, {passive:false});
+    document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+  })();
+
   const API_BASE_URL = "https://web-production-13d5a.up.railway.app";
 
   function authHeaders() {
@@ -258,6 +315,8 @@
       tabLicense.style.display = t==="license" ? "" : "none";
       tabFinal.style.display   = t==="final"   ? "" : "none";
       tabUsers.style.display   = t==="users"   ? "" : "none";
+      // keep the viewport vertically centered when switching tabs
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 
@@ -744,17 +803,6 @@
       alert('Delete failed: ' + (data.error || res.statusText || 'Unknown error'));
     }
   }
-
-  document.querySelectorAll('#usersTable thead th[data-sort]').forEach(th=>{
-    th.addEventListener('click', ()=>{
-      const key = th.getAttribute('data-sort');
-      if(usersSortKey===key){ usersSortAsc = !usersSortAsc; } else { usersSortKey = key; usersSortAsc=true; }
-      renderUsers(); updateUsersPager();
-    });
-  });
-  document.getElementById('searchUsers').addEventListener('input', ()=>{ usersTotalCache.clear(); loadUsers(0); });
-  document.getElementById('filterUsers').addEventListener('change', ()=>{ usersTotalCache.clear(); loadUsers(0); });
-  document.getElementById('filterRoles').addEventListener('change', ()=>{ usersTotalCache.clear(); loadUsers(0); });
 
   window.toggleDetail = function(btn){
     const detail = btn.closest('td').querySelector('.detail');
