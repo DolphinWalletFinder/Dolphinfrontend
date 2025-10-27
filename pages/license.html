@@ -35,31 +35,30 @@
     touch-action: pan-y;            /* allow only vertical panning */
     padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
              env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
 
-    /* >>> Absolute centering of the app shell on every viewport */
-    min-height: 100svh;
+  /* === HARD-CENTER: full-viewport fixed grid that centers the shell === */
+  .stage{
+    position: fixed; inset: 0;      /* always match the viewport */
+    display: grid; place-items: center;
+    padding: clamp(16px,3vw,32px);  /* safe breathing room */
+    overflow-y: auto;               /* vertical scroll only if needed */
+    overflow-x: hidden;
+    min-height: 100svh;             /* support mobile UI bars */
     min-height: 100dvh;
-    display: grid;
-    place-items: center;
   }
 
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
 
-  /* The stage simply exists for padding; centering is handled by body */
-  .stage{
-    width:100%;
-    padding:clamp(16px,3vw,32px);
-  }
-
   .shell{
-    width:min(1200px,98vw); min-height:560px;
+    width:min(1200px,98vw); 
+    min-height:560px;
     display:grid; grid-template-columns:1.05fr 1.45fr;
     border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
     box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
-
-    /* >>> Ensure perfect centering & no unexpected offsets */
-    margin: 0 auto;
+    margin: 0;                       /* no margins needed; grid centers it */
+    max-width: 100%;                 /* guard against overflow */
   }
   @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
@@ -146,6 +145,10 @@
   @media (max-width: 600px){
     .logo-wrap{ width:min(180px,60vw); margin:0 auto; }
   }
+
+  /* FINAL SAFETY OVERRIDES (in case of external wrappers/styles) */
+  html, body { margin:0 !important; padding:0 !important; }
+  #app, #root { margin:0 !important; padding:0 !important; }
   </style>
 </head>
 <body>
