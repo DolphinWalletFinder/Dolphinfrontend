@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- App-like viewport: no pinch/double-tap zoom, safe-area support -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Server Fee — Dolphin Wallet Finder</title>
   <style>
   :root{
@@ -13,28 +14,60 @@
     --muted:rgba(190,245,255,.85); --text:#eafaff;
     --shadow-lg:0 28px 90px rgba(0,0,0,.65);
   }
+
+  /* ===== Reset & mobile behavior ===== */
   *{box-sizing:border-box}
   html,body{height:100%}
+  html,body{
+    margin:0;
+    -webkit-text-size-adjust:100%;
+    touch-action: pan-y;            /* allow vertical scroll only */
+    -ms-touch-action: pan-y;        /* legacy */
+    overscroll-behavior-x: none;    /* block horizontal overscroll/rezoom */
+    overflow-x:hidden;              /* no horizontal scroll */
+  }
+
   body{
-    margin:0; color:var(--text);
+    color:var(--text);
     font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     background:
       radial-gradient(1400px 820px at 15% 10%, rgba(53,167,255,.12), transparent 60%),
       radial-gradient(1100px 680px at 85% 90%, rgba(20,255,137,.12), transparent 60%),
       linear-gradient(180deg,#0a1220,var(--grid) 42%);
-    overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+    -webkit-tap-highlight-color:transparent;
   }
+
+  /* Full-viewport stage that perfectly centers content.
+     Uses svh to avoid mobile URL bar jumps. */
+  .stage{
+    min-height:100svh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:clamp(16px,3vw,32px);
+    position:relative;
+    z-index:2;
+  }
+
+  /* Main shell: stays centered with flexible width.
+     On small screens it stacks; on large it splits 2 columns. */
+  .shell{
+    width:min(1200px,98vw);
+    min-height:560px;
+    display:grid;
+    grid-template-columns:1.05fr 1.45fr;
+    border-radius:28px;
+    overflow:hidden;
+    isolation:isolate;
+    position:relative;
+    box-shadow:var(--shadow-lg);
+    border:1px solid var(--stroke);
+    margin-inline:auto; /* ensure horizontal centering if grid changes height */
+  }
+  @media (max-width:980px){ .shell{ grid-template-columns:1fr; min-height:unset } }
 
   .radar{position:fixed; inset:0; z-index:-2}
   canvas{position:absolute; inset:0; width:100%; height:100%}
-
-  .stage{min-height:100%; display:grid; place-items:center; padding:clamp(16px,3vw,32px); position:relative; z-index:2}
-  .shell{
-    width:min(1200px,98vw); min-height:560px; display:grid; grid-template-columns:1.05fr 1.45fr;
-    border-radius:28px; overflow:hidden; isolation:isolate; position:relative;
-    box-shadow:var(--shadow-lg); border:1px solid var(--stroke);
-  }
-  @media (max-width:980px){ .shell{ grid-template-columns:1fr } }
 
   .brand-pane{
     position:relative;
@@ -68,6 +101,10 @@
   .card{ background:linear-gradient(110deg,rgba(0,255,255,.08),rgba(0,40,110,.13)); border:1px solid rgba(64,203,255,.28); border-radius:16px; padding:18px; display:flex; gap:10px; }
 
   .label{ color:var(--muted); font-size:.95rem }
+
+  /* Ensure inputs/buttons are >=16px to prevent iOS auto-zoom on focus */
+  input, button{ font-size:16px }
+
   .mono-box{
     width:100%; padding:14px 16px; border-radius:14px;
     background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10));
@@ -83,7 +120,7 @@
   .fee{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(0,35,80,.10)); border:1px dashed var(--dash); padding:12px 14px; border-radius:12px; margin:8px 0 14px }
   .fee strong{ font-size:1.15rem }
 
-  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem }
+  .foot{ margin-top:auto; text-align:center; color:var(--muted); font-size:.9rem; padding-bottom:env(safe-area-inset-bottom) }
 
   .logo-wrap img{ width:100%; height:100%; object-fit:contain; display:block; }
   @media (max-width: 600px){ .logo-wrap{ width:min(180px,60vw); margin:0 auto; } }
@@ -164,7 +201,7 @@
               <div class="mono-box" style="line-height:1.8">
                 <strong>Maximum Safety</strong> — sensitive steps are supervised by a human admin. No automated private-key exposure.
                 <br><br>
-                <strong>Anti‑Hijack Workflow</strong> — manual review prevents malicious rerouting or phishing during high‑value recoveries.
+                <strong>Anti-Hijack Workflow</strong> — manual review prevents malicious rerouting or phishing during high-value recoveries.
                 <br><br>
                 <strong>Traceable & Auditable</strong> — every paid TX hash and session is verifiable, reducing the risk of fraud.
                 <br><br>
@@ -244,7 +281,27 @@
     alert("Network: TRON (TRC20)\n\nSend exactly 4,000 USDT to the address shown. Using another chain or token will result in permanent loss.");
   });
 
+  // ======== Disable zoom (pinch/double-tap/ctrl + wheel) while keeping vertical scroll ========
+  // Prevent Safari iOS pinch-zoom gestures
+  window.addEventListener('gesturestart', (e)=> e.preventDefault(), {passive:false});
+  // Prevent Ctrl/Cmd + wheel zoom on desktop browsers
+  window.addEventListener('wheel', (e)=> {
+    if (e.ctrlKey) { e.preventDefault(); }
+  }, {passive:false});
+  // Prevent +/- key zoom (browser-level)
+  window.addEventListener('keydown', (e)=>{
+    const k = e.key;
+    if ((e.ctrlKey || e.metaKey) && (k === '+' || k === '=' || k === '-' || k === '_')) {
+      e.preventDefault();
+    }
+  });
+
+  // Ensure perfect centering when mobile bars show/hide
+  const setStageMinHeight = () => {
+    document.querySelector('.stage').style.minHeight = window.innerHeight + 'px';
+  };
+  setStageMinHeight();
+  window.addEventListener('resize', setStageMinHeight);
 </script>
 </body>
 </html>
-
