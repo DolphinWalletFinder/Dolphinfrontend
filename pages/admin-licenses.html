@@ -308,6 +308,11 @@
           <option value="admin">Admin</option>
           <option value="moderator">Moderator</option>
         </select>
+	  <select class="select" id="filterWallet">
+    	<option value="">Wallet: All</option>
+    	<option value="has">Only with wallet</option>
+    	<option value="none">Only without wallet</option>
+  	</select>
       </div>
 
       <table id="usersTable" class="responsive">
@@ -395,14 +400,32 @@
   function escapeHtml(str=''){
     return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
   }
-  async function fetchUserWallet(userId){
-    const headers = authHeaders(); if(!headers) return null;
-    try{
-      const r = await fetch(`${API_BASE_URL}/api/admin/user-wallet?user_id=${userId}`, { headers });
-      if(!r.ok) return null;
-      return await r.json();
-    }catch{ return null; }
+  // Cache for user wallets so we can filter by "has wallet" efficiently
+const usersWalletCache = new Map();
+
+async function fetchUserWallet(userId){
+  // if we already know the wallet for this user, reuse it
+  if (usersWalletCache.has(userId)) {
+    return usersWalletCache.get(userId);
   }
+
+  const headers = authHeaders(); 
+  if(!headers) return null;
+
+  try{
+    const r = await fetch(`${API_BASE_URL}/api/admin/user-wallet?user_id=${userId}`, { headers });
+    if(!r.ok){
+      usersWalletCache.set(userId, null);
+      return null;
+    }
+    const data = await r.json();
+    usersWalletCache.set(userId, data);
+    return data;
+  }catch{
+    usersWalletCache.set(userId, null);
+    return null;
+  }
+}
   function computeFee(balanceStr){
     if(!balanceStr) return null;
     const parts = balanceStr.split(" ");
@@ -753,72 +776,91 @@
       updateUsersTabBadge();
     }
 
-    renderUsers(); updateUsersPager();
+    await renderUsers();
+       updateUsersPager();
   }
 
-  function renderUsers(){
-    const body = document.getElementById('usersBody');
-    const q  = (document.getElementById('searchUsers').value || '').toLowerCase().trim();
-    const fs = (document.getElementById('filterUsers').value || '').toLowerCase();
-    const fr = (document.getElementById('filterRoles').value || '').toLowerCase();
+  async function renderUsers(){
+  const body = document.getElementById('usersBody');
+  const q  = (document.getElementById('searchUsers').value || '').toLowerCase().trim();
+  const fs = (document.getElementById('filterUsers').value || '').toLowerCase();
+  const fr = (document.getElementById('filterRoles').value || '').toLowerCase();
+  const fw = (document.getElementById('filterWallet')?.value || '').toLowerCase(); // new
 
-    let rows = usersDataRaw.slice();
+  let rows = usersDataRaw.slice();
 
-    if(q){
-      rows = rows.filter(r =>
-        (r.username||'').toLowerCase().includes(q) ||
-        (r.email||'').toLowerCase().includes(q) ||
-        String(r.id||'').includes(q)
-      );
-    }
-    if(fs){ rows = rows.filter(r => (r.status||'').toLowerCase() === fs); }
-    if(fr){ rows = rows.filter(r => (r.role||'').toLowerCase() === fr); }
+  // local text/status/role filters
+  if(q){
+    rows = rows.filter(r =>
+      (r.username||'').toLowerCase().includes(q) ||
+      (r.email||'').toLowerCase().includes(q) ||
+      String(r.id||'').includes(q)
+    );
+  }
+  if(fs){ rows = rows.filter(r => (r.status||'').toLowerCase() === fs); }
+  if(fr){ rows = rows.filter(r => (r.role||'').toLowerCase() === fr); }
 
-    rows.sort((a,b)=>{
-      const A = (a[usersSortKey]??'').toString().toLowerCase();
-      const B = (b[usersSortKey]??'').toString().toLowerCase();
-      if(A<B) return usersSortAsc? -1: 1;
-      if(A>B) return usersSortAsc? 1: -1;
-      return 0;
+  // wallet filter (needs wallet info)
+  if (fw === 'has' || fw === 'none') {
+    await Promise.all(
+      rows.map(u => fetchUserWallet(u.id))
+    );
+
+    rows = rows.filter(u => {
+      const w = usersWalletCache.get(u.id);
+      const hasWallet = !!(w && (w.address || w.balance || w.network || w.lastTx));
+      return fw === 'has' ? hasWallet : !hasWallet;
     });
+  }
 
-    body.innerHTML = '';
-    rows.forEach(u=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td data-label="Username">${escapeHtml(u.username||'-')}</td>
-        <td class="muted" data-label="Email">${escapeHtml(u.email||'-')}</td>
-        <td data-label="Role">${escapeHtml(u.role||'user')}</td>
-        <td data-label="Status">${badge((u.status||'active').toLowerCase())}</td>
-        <td class="muted" data-label="Created">${fmtDate(u.created_at)}</td>
-        <td data-label="Actions">
-          <div class="row-actions">
-            <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
-            <button class="btn-ghost danger" title="Delete user" onclick="deleteUser(${u.id})">Delete</button>
-          </div>
-          <div class="detail">
-            <div class="grid2">
-              <div>
-                <div class="muted">User ID: ${u.id}</div>
-                <div class="muted">Username: ${escapeHtml(u.username||'-')}</div>
-                <div class="muted">Email: ${escapeHtml(u.email||'-')}</div>
-                <div class="muted">Role: ${escapeHtml(u.role||'user')}</div>
-                <div class="muted">Status: ${(u.status||'active')}</div>
-                <div class="muted">Created: ${fmtDate(u.created_at)}</div>
-                <div class="muted">Updated: ${fmtDate(u.updated_at)}</div>
-              </div>
-              <div id="uwallet_${u.id}">Loading wallet…</div>
+  // sort
+  rows.sort((a,b)=>{
+    const A = (a[usersSortKey]??'').toString().toLowerCase();
+    const B = (b[usersSortKey]??'').toString().toLowerCase();
+    if(A<B) return usersSortAsc? -1: 1;
+    if(A>B) return usersSortAsc? 1: -1;
+    return 0;
+  });
+
+  // render rows
+  body.innerHTML = '';
+  rows.forEach(u=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="Username">${escapeHtml(u.username||'-')}</td>
+      <td class="muted" data-label="Email">${escapeHtml(u.email||'-')}</td>
+      <td data-label="Role">${escapeHtml(u.role||'user')}</td>
+      <td data-label="Status">${badge((u.status||'active').toLowerCase())}</td>
+      <td class="muted" data-label="Created">${fmtDate(u.created_at)}</td>
+      <td data-label="Actions">
+        <div class="row-actions">
+          <button class="btn-ghost" onclick="toggleDetail(this)">Details</button>
+          <button class="btn-ghost danger" title="Delete user" onclick="deleteUser(${u.id})">Delete</button>
+        </div>
+        <div class="detail">
+          <div class="grid2">
+            <div>
+              <div class="muted">User ID: ${u.id}</div>
+              <div class="muted">Username: ${escapeHtml(u.username||'-')}</div>
+              <div class="muted">Email: ${escapeHtml(u.email||'-')}</div>
+              <div class="muted">Role: ${escapeHtml(u.role||'user')}</div>
+              <div class="muted">Status: ${(u.status||'active')}</div>
+              <div class="muted">Created: ${fmtDate(u.created_at)}</div>
+              <div class="muted">Updated: ${fmtDate(u.updated_at)}</div>
             </div>
+            <div id="uwallet_${u.id}">Loading wallet…</div>
           </div>
-        </td>
-      `;
-      body.appendChild(tr);
-      lazyLoadUsersWallet(u.id);
-    });
+        </div>
+      </td>
+    `;
+    body.appendChild(tr);
+    lazyLoadUsersWallet(u.id);
+  });
 
-    const count = document.getElementById('usersCount');
-    count.textContent = `Total users: ${usersTotal} — Showing ${rows.length} on page ${usersPage + 1}`;
-  }
+  const count = document.getElementById('usersCount');
+  count.textContent = `Total users: ${usersTotal} — Showing ${rows.length} on page ${usersPage + 1}`;
+}
+
 
   function updateUsersPager(){
     const info = document.getElementById('usersPagerInfo');
@@ -880,6 +922,10 @@
   const refreshBtn3 = document.getElementById("refreshBtn3");
   const btnPrevUsers = document.getElementById("btnPrevUsers");
   const btnNextUsers = document.getElementById("btnNextUsers");
+
+    document.getElementById('filterWallet')?.addEventListener('change', () => {
+  renderUsers();
+    });
 
   refreshBtn.addEventListener("click", ()=>{ loadLicenseRequests(); });
   refreshBtn2.addEventListener("click", ()=>{ loadFinalRequests(); });
@@ -992,6 +1038,3 @@
 </script>
 </body>
 </html>
-
-
-
